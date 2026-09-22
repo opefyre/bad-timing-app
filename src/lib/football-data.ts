@@ -29,7 +29,7 @@ function teamMatches(team: { id?: number; name: string }, match: Match) {
 }
 
 function followedTeams(input: EventInput): Array<{ id?: number; name: string }> {
-  if (input.footballTeams?.length) return input.footballTeams.map((team) => ({ id: team.id, name: team.name }));
+  if (input.footballTeams?.length) return input.footballTeams.filter((team) => team.source !== 'api-football').map((team) => ({ id: team.id, name: team.name }));
   return input.footballTeam ? [{ name: input.footballTeam }] : [];
 }
 

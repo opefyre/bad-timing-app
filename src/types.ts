@@ -16,9 +16,13 @@ export interface VenueInput {
   countryName?: string;
 }
 
+export type FootballSource = 'football-data' | 'api-football';
+
 export interface FootballTeam {
   id: number;
   name: string;
+  /** Which provider should check this team's fixtures. Defaults to football-data. */
+  source?: FootballSource;
 }
 
 export interface EventInput {

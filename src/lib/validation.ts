@@ -26,8 +26,10 @@ export function validateEvent(raw:unknown):EventInput {
    if(!Array.isArray(rawTeams)||rawTeams.length>10)throw new InputError('Choose up to 10 football teams.');
    footballTeams=[];const seen=new Set<number>();
    for(const item of rawTeams){const t=record(item);const id=t.id,name=string(t.name,60);
+     const source=t.source;
+     if(source!==undefined&&source!=='football-data'&&source!=='api-football')throw new InputError('Choose a team from the search results.');
      if(typeof id!=='number'||!Number.isSafeInteger(id)||id<1||!name||seen.has(id))throw new InputError('Choose a team from the search results.');
-     seen.add(id);footballTeams.push({id,name});}
+     seen.add(id);footballTeams.push({id,name,source:source as 'football-data'|'api-football'|undefined});}
    if(!footballTeams.length)footballTeams=undefined;
  }
  return {venue:{address,lat:lat as number|undefined,lng:lng as number|undefined,timezone,countryCode,name:string(v.name,150),state:string(v.state,150),city:string(v.city,150),countryName:string(v.countryName,150),subdivisionCode:string(v.subdivisionCode,25)},dateTime,durationMinutes,eventKind,isOutdoor:r.isOutdoor,radiusKm,programmeId:programmeId as number|undefined,programmeName:string(r.programmeName,150),footballTeams,footballTeam:string(r.footballTeam,150),includeNews:r.includeNews===true,needsInternet:r.needsInternet===true};

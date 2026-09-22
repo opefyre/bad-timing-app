@@ -160,6 +160,8 @@ button:focus-visible, input:focus-visible, a:focus-visible, summary:focus-visibl
   cursor: pointer;
 }
 .team-chip:hover { border-color: var(--lime); color: var(--lime); }
+.team-chip small { color: var(--dim); font-size: 10px; }
+.team-chip:hover small { color: var(--lime); }
 .team-chip span:last-child { color: var(--dim); font-weight: 900; }
 .team-chip:hover span:last-child { color: var(--lime); }
 .location-results { top: 78px; max-height: 280px; overflow: auto; }

@@ -4,11 +4,11 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import DurationPicker from '@/components/DurationPicker';
 import LocationMap from '@/components/LocationMap';
 import StartPicker from '@/components/StartPicker';
-import { EventInput, EventKind, FootballTeam, VenueInput } from '@/types';
+import { EventInput, EventKind, FootballSource, FootballTeam, VenueInput } from '@/types';
 
 type LocationSuggestion = VenueInput & { id: string; label: string; lat: number; lng: number };
 type TvSuggestion = { id: number; name: string; detail?: string };
-type FootballSuggestion = { id: number; name: string; detail?: string };
+type FootballSuggestion = { id: number; name: string; detail?: string; source?: FootballSource };
 
 const EVENT_KINDS: Array<{ value: EventKind; label: string }> = [
   { value: 'birthday', label: 'Birthday' },
@@ -130,7 +130,7 @@ export default function EventForm({ onSubmit, isLoading, initialData }: Props) {
         const data = await response.json();
         if(controller.signal.aborted)return;
         if (!response.ok) throw new Error('Team search failed');
-        setFootballResults((data.teams ?? []).map((team: FootballSuggestion) => ({ id: team.id, name: team.name, detail: team.detail })));
+        setFootballResults((data.teams ?? []).map((team: FootballSuggestion) => ({ id: team.id, name: team.name, detail: team.detail, source: team.source })));
         setFootballOpen(true);
       } catch {
         setFootballResults([]);
@@ -210,7 +210,11 @@ export default function EventForm({ onSubmit, isLoading, initialData }: Props) {
   }
 
   function addFootballTeam(item: FootballSuggestion) {
-    setFootballTeams((current) => current.some((team) => team.id === item.id) ? current : [...current, { id: item.id, name: item.name }]);
+    setFootballTeams((current) => {
+      const same = (team: FootballTeam) => team.name.toLowerCase() === item.name.toLowerCase();
+      if (current.some(same)) return current;
+      return [...current, { id: item.id, name: item.name, source: item.source }];
+    });
     setFootballQuery('');
     setFootballResults([]);
     setFootballOpen(false);
@@ -357,7 +361,7 @@ export default function EventForm({ onSubmit, isLoading, initialData }: Props) {
               <div className="team-chips" role="list" aria-label="Selected football teams">
                 {footballTeams.map((team) => (
                   <button key={team.id} type="button" className="team-chip" onClick={() => removeFootballTeam(team.id)} aria-label={`Remove ${team.name}`}>
-                    <span>{team.name}</span><span aria-hidden="true">×</span>
+                    <span>{team.name}</span>{team.source === 'api-football' && <small>· API-Football</small>}<span aria-hidden="true">×</span>
                   </button>
                 ))}
               </div>

@@ -25,7 +25,16 @@ Primary documentation reviewed for this implementation: 22 September 2026. These
 - Coverage: Selected team, subject to your subscription and published fixtures. Match end times are estimates.
 - Sent: Team search and fixture date range.
 - Reuse: Provider terms; keep credentials confidential.
-- Implementation: dateTo is exclusive. Exact team name/short name/abbreviation within the connected plan. A two-hour match window is explicitly estimated.
+- Implementation: dateTo is exclusive. Exact team name/short name/abbreviation within the connected plan. A two-hour match window is explicitly estimated. The team picker reads a shipped snapshot of this plan's team catalogs (`npm run teams` regenerates it); a runtime fan-out across competitions would exceed the free plan rate limit.
+
+## API-Football
+
+- Mode: **key** · `API_FOOTBALL_KEY`.
+- [Documentation](https://www.api-football.com/documentation-v3) · [Publisher](https://www.api-football.com/).
+- Coverage: Selected teams worldwide across most national leagues and cups, by team ID. Free plan allowance is about 100 requests a day, so team searches are cached for 30 days, fixture windows for 3 hours and selections pace themselves at ~1 request/second.
+- Sent: Team name for search; team ID with a fixture date range.
+- Reuse: Provider terms; keep credentials confidential.
+- Implementation: `/teams?search=` for the merged picker; `/fixtures?team=&from=&to=` per selected team. Cancelled/postponed/suspended fixtures are dropped; a two-hour match window is estimated. Teams are matched by provider-native ID (never guessed across providers).
 
 ## TVmaze
 
