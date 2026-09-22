@@ -1,14 +1,18 @@
 {
   "name": "bad-timing-app",
-  "version": "0.1.0",
+  "version": "3.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "eslint src",
     "typecheck": "tsc --noEmit",
-    "check": "npm run lint && npm run typecheck"
+    "check": "npm run lint && npm run typecheck && npm test",
+    "test": "node --require ./scripts/register.cjs --test tests/*.test.cjs",
+    "doctor": "node --require ./scripts/register.cjs scripts/doctor.cjs",
+    "smoke": "node --require ./scripts/register.cjs scripts/smoke.cjs",
+    "discover": "node --require ./scripts/register.cjs scripts/discover.cjs"
   },
   "dependencies": {
     "next": "16.3.5",
@@ -26,5 +30,8 @@
     "tailwindcss": "^4",
     "typescript": "^5",
     "@types/leaflet": "^1.9.22"
+  },
+  "engines": {
+    "node": ">=22 <25"
   }
 }

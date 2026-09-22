@@ -1,21 +1,14 @@
+import { safeMessage } from './http';
 import { CheckResult, EventInput } from '@/types';
 import { cached } from './cache';
 import { fetchJson, HttpError } from './http';
-import { eventWindow, formatInstant, localDate, overlaps } from './time';
+import { eventWindow, formatInstant, localDate, overlaps, addLocalDays } from './time';
 import { defaultPreference } from './preferences';
 
 type Show = { id: number; name: string; url: string };
-type SearchHit = { score: number; show: Show };
 type Episode = { id: number; name: string; season: number; number: number; airstamp?: string; runtime?: number; url?: string };
 
-async function resolveShow(input: EventInput): Promise<Show | null> {
-  if (input.programmeId && input.programmeName) return { id: input.programmeId, name: input.programmeName, url: `https://www.tvmaze.com/shows/${input.programmeId}` };
-  if (!input.programmeName) return null;
-  const hits = await cached(`tv-search:${input.programmeName.toLowerCase()}`, 60 * 60_000, () => fetchJson<SearchHit[]>(`https://api.tvmaze.com/search/shows?q=${encodeURIComponent(input.programmeName!)}`));
-  if (!hits.length) return null;
-  const exact = hits.find((hit) => hit.show.name.toLowerCase() === input.programmeName!.toLowerCase());
-  return (exact ?? hits[0]).show;
-}
+async function resolveShow(input:EventInput):Promise<Show|null>{return input.programmeId&&input.programmeName?{id:input.programmeId,name:input.programmeName,url:`https://www.tvmaze.com/shows/${input.programmeId}`} : null;}
 
 export async function checkTVmaze(input: EventInput): Promise<CheckResult> {
   const checkedAt = new Date().toISOString();
@@ -26,19 +19,18 @@ export async function checkTVmaze(input: EventInput): Promise<CheckResult> {
 
   try {
     const show = await resolveShow(input);
-    if (!show) return { ...base, state: 'checked', data: [], message: 'Programme not found' };
+    if (!show) return { ...base, state: 'partial', data: [], message: 'Choose the exact programme from search results' };
     const date = localDate(input.dateTime);
-    let episodes: Episode[] = [];
-    try {
-      episodes = await cached(`tv-episodes:${show.id}:${date}`, 60 * 60_000, () => fetchJson<Episode[]>(`https://api.tvmaze.com/shows/${show.id}/episodesbydate?date=${date}`));
-    } catch (error) {
-      if (!(error instanceof HttpError) || error.status !== 404) throw error;
-    }
+    const episodes:Episode[]=[];let partial=false;
+    for(const delta of [-1,0,1]){const day=localDate(addLocalDays(`${date}T00:00`,delta));try{
+      const rows=await cached(`tv-episodes:${show.id}:${day}`,3600000,()=>fetchJson<Episode[]>(`https://api.tvmaze.com/shows/${show.id}/episodesbydate?date=${day}`));
+      if(!Array.isArray(rows))throw new Error('Unexpected programme response');episodes.push(...rows);
+    }catch(error){if(!(error instanceof HttpError)||error.status!==404)throw error;}}
     const { start, end } = eventWindow(input.dateTime, input.durationMinutes, timezone);
     const conflicts = episodes.flatMap((episode) => {
-      if (!episode.airstamp) return [];
+      if (!episode.airstamp || !episode.runtime) {partial=true;return []; }
       const episodeStart = new Date(episode.airstamp);
-      const episodeEnd = new Date(episodeStart.getTime() + (episode.runtime ?? 60) * 60_000);
+      const episodeEnd = new Date(episodeStart.getTime() + episode.runtime * 60_000);
       if (!overlaps(start, end, episodeStart, episodeEnd)) return [];
       return [{
         id: `tv-${episode.id}`,
@@ -51,10 +43,11 @@ export async function checkTVmaze(input: EventInput): Promise<CheckResult> {
         preference: defaultPreference('tv', input),
         startsAt: episode.airstamp,
         endsAt: episodeEnd.toISOString(),
+        providerId:'tvmaze',evidence:'structured' as const,timing:'scheduled' as const,relevance:'overlap' as const,resolutionEligible:true,
       }];
     });
-    return { ...base, state: 'checked', data: conflicts };
+    return { ...base, state: partial?'partial':'checked', data: conflicts };
   } catch (error) {
-    return { ...base, state: 'unavailable', data: [], message: error instanceof Error ? error.message : 'Request failed' };
+    return { ...base, state: 'unavailable', data: [], message: safeMessage(error) };
   }
 }

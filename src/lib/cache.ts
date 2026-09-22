@@ -7,6 +7,7 @@ root.__badTimingCache = store;
 
 export async function cached<T>(key: string, ttlMs: number, loader: () => Promise<T>): Promise<T> {
   const now = Date.now();
+  if (store.size > 128) for (const [id, entry] of store) { if (!entry.pending) store.delete(id); if (store.size <= 96) break; }
   const existing = store.get(key) as Entry<T> | undefined;
   if (existing?.pending) return existing.pending;
   if (existing && existing.expiresAt > now && existing.value !== undefined) return existing.value;

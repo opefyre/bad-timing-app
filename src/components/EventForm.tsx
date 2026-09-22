@@ -47,6 +47,9 @@ export default function EventForm({ onSubmit, isLoading, initialData }: Props) {
   const [duration, setDuration] = useState(initialData?.durationMinutes ?? 90);
   const [isOutdoor, setIsOutdoor] = useState(initialData?.isOutdoor ?? false);
   const [venueName, setVenueName] = useState(initialData?.venue.name ?? '');
+  const [radiusKm,setRadiusKm]=useState(initialData?.radiusKm??3);
+  const [includeNews,setIncludeNews]=useState(initialData?.includeNews??false);
+  const [needsInternet,setNeedsInternet]=useState(initialData?.needsInternet??false);
   const [footballTeam, setFootballTeam] = useState(initialData?.footballTeam ?? '');
 
   const [programmeName, setProgrammeName] = useState(initialData?.programmeName ?? '');
@@ -68,11 +71,13 @@ export default function EventForm({ onSubmit, isLoading, initialData }: Props) {
   useEffect(() => {
     const query = locationQuery.trim();
     if (query.length < 3 || (venue?.address === query && typeof venue.lat === 'number')) return;
+    const controller=new AbortController();
     const timer = window.setTimeout(async () => {
       setLocationBusy(true);
       try {
-        const response = await fetch(`/api/geocode?q=${encodeURIComponent(query)}`);
+        const response = await fetch(`/api/geocode?q=${encodeURIComponent(query)}`,{signal:controller.signal});
         const data = await response.json();
+        if(controller.signal.aborted)return;
         if (!response.ok) throw new Error('Location search failed');
         setLocations(data.suggestions ?? []);
         setLocationOpen(true);
@@ -82,17 +87,19 @@ export default function EventForm({ onSubmit, isLoading, initialData }: Props) {
         setLocationBusy(false);
       }
     }, 280);
-    return () => window.clearTimeout(timer);
+    return () => {window.clearTimeout(timer);controller.abort();};
   }, [locationQuery, venue]);
 
   useEffect(() => {
     const query = programmeName.trim();
     if (query.length < 2 || programmeId) return;
+    const controller=new AbortController();
     const timer = window.setTimeout(async () => {
       setTvBusy(true);
       try {
-        const response = await fetch(`/api/tv-search?q=${encodeURIComponent(query)}`);
+        const response = await fetch(`/api/tv-search?q=${encodeURIComponent(query)}`,{signal:controller.signal});
         const data = await response.json();
+        if(controller.signal.aborted)return;
         if (!response.ok) throw new Error('TV search failed');
         setTvResults(data.shows ?? []);
         setTvOpen(true);
@@ -102,10 +109,10 @@ export default function EventForm({ onSubmit, isLoading, initialData }: Props) {
         setTvBusy(false);
       }
     }, 280);
-    return () => window.clearTimeout(timer);
+    return () => {window.clearTimeout(timer);controller.abort();};
   }, [programmeName, programmeId]);
 
-  const canSubmit = useMemo(() => locationQuery.trim().length >= 3 && Boolean(dateTime) && duration >= 15, [locationQuery, dateTime, duration]);
+  const canSubmit = useMemo(() => locationQuery.trim().length >= 3 && Boolean(dateTime) && duration >= 15 && (!programmeName.trim()||!!programmeId), [locationQuery, dateTime, duration,programmeName,programmeId]);
 
   function setPickedVenue(item: VenueInput, label = item.address) {
     setVenue(item);
@@ -125,6 +132,7 @@ export default function EventForm({ onSubmit, isLoading, initialData }: Props) {
       countryCode: item.countryCode,
       state: item.state,
       city: item.city,
+      subdivisionCode:item.subdivisionCode,countryName:item.countryName,
     }, item.label);
   }
 
@@ -187,7 +195,7 @@ export default function EventForm({ onSubmit, isLoading, initialData }: Props) {
       isOutdoor,
       footballTeam: footballTeam.trim() || undefined,
       programmeName: programmeName.trim() || undefined,
-      programmeId,
+      programmeId,radiusKm,includeNews,needsInternet,
     });
   }
 
@@ -308,6 +316,13 @@ export default function EventForm({ onSubmit, isLoading, initialData }: Props) {
         </div>
       </section>
 
+      <section className="form-section optional-zone">
+        <div className="section-title">Around the venue</div>
+        <div className="radius-buttons" role="group" aria-label="Nearby search radius">{[1,3,5,10].map(km=><button type="button" key={km} aria-pressed={radiusKm===km} className={`pixel-button ${radiusKm===km?'accent':''}`} onClick={()=>setRadiusKm(km)}>{km} km</button>)}</div>
+        <label className="check-option"><input type="checkbox" checked={includeNews} onChange={e=>setIncludeNews(e.target.checked)}/><span>Include recent local news</span></label>
+        <label className="check-option"><input type="checkbox" checked={needsInternet} onChange={e=>setNeedsInternet(e.target.checked)}/><span>This event needs internet</span></label>
+      </section>
+      {programmeName.trim()&&!programmeId&&<p className="field-message">Choose a programme from the results, or clear the field.</p>}
       <button className="pixel-cta" type="submit" disabled={!canSubmit || isLoading}>
         {isLoading ? 'Checking…' : 'Check this date'}<span aria-hidden="true">→</span>
       </button>

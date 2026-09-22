@@ -1,0 +1,9 @@
+const test=require('node:test');const assert=require('node:assert/strict');const React=require('react');const {renderToStaticMarkup}=require('react-dom/server');const {event,withEnv}=require('./helpers.cjs');
+const ReportView=require('@/components/ReportView').default;
+const stamp='2026-09-22T10:00:00Z';const noop=()=>{};
+function render(sources){return renderToStaticMarkup(React.createElement(ReportView,{report:{event:event(),conflicts:[],sources,suggestions:[],coverageGaps:[],checkedAt:stamp},preferences:{},recommendationBusy:false,recommendationDirty:true,onPreference:noop,onRecalculate:noop,onApply:noop,onEdit:noop,onRerun:noop}));}
+function source(state,scope='event'){return {id:'test',name:'Test source',url:'https://example.org',state,scope,checkedAt:stamp};}
+test('Current-only data cannot imply that future schedules were checked',()=>{const markup=render([source('checked','current')]);assert.match(markup,/Could not check this date/);assert.doesNotMatch(markup,/No overlap found in checked schedules/);});
+test('Failed schedule checks do not render a clear-date headline',()=>{const markup=render([source('unavailable')]);assert.match(markup,/Could not check this date/);assert.match(markup,/Some checks are incomplete/);});
+test('Successful empty schedule queries still state their limited meaning',()=>{const markup=render([source('checked')]);assert.match(markup,/No overlap found in checked schedules/);assert.match(markup,/does not confirm that the place is clear or safe/);});
+test('Source information shows configuration state without serializing credentials',()=>withEnv({TOMTOM_API_KEY:'DO_NOT_LEAK_ABCDEF',GEOAPIFY_API_KEY:'DO_NOT_LEAK_123456'},async()=>{const markup=renderToStaticMarkup(React.createElement(require('@/app/sources/page').default));assert.match(markup,/Credential configured/);assert.doesNotMatch(markup,/DO_NOT_LEAK_/);}));

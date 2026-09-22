@@ -1,7 +1,7 @@
 export type EventPreference = 'avoid' | 'neutral' | 'plan_around';
 export type EventKind = 'birthday' | 'dinner' | 'meetup' | 'workshop' | 'outdoor_activity' | 'screening' | 'other';
-export type ConflictType = 'transport' | 'sport' | 'holiday' | 'weather' | 'daylight' | 'tv' | 'nearby_event';
-export type SourceState = 'checked' | 'unavailable' | 'out_of_range' | 'not_applicable';
+export type ConflictType = 'transport' | 'sport' | 'holiday' | 'weather' | 'daylight' | 'tv' | 'nearby_event' | 'road' | 'warning' | 'hazard' | 'air_quality' | 'news' | 'civic' | 'internet';
+export type SourceState = 'checked' | 'unavailable' | 'out_of_range' | 'not_applicable' | 'not_configured' | 'partial' | 'disabled';
 
 export interface VenueInput {
   address: string;
@@ -12,11 +12,13 @@ export interface VenueInput {
   countryCode?: string;
   state?: string;
   city?: string;
+  subdivisionCode?: string;
+  countryName?: string;
 }
 
 export interface EventInput {
   venue: VenueInput;
-  /** Venue-local wall-clock value from <input type="datetime-local">. */
+  /** Venue-local wall-clock value from the custom date/time picker. */
   dateTime: string;
   durationMinutes: number;
   eventKind: EventKind;
@@ -24,6 +26,9 @@ export interface EventInput {
   footballTeam?: string;
   programmeName?: string;
   programmeId?: number;
+  radiusKm?: number;
+  includeNews?: boolean;
+  needsInternet?: boolean;
 }
 
 export interface Conflict {
@@ -39,6 +44,20 @@ export interface Conflict {
   endsAt?: string;
   distanceKm?: number;
   placeName?: string;
+  providerId?: string;
+  policyKey?: string;
+  evidence?: 'official' | 'structured' | 'observed' | 'reported' | 'community';
+  timing?: 'scheduled' | 'forecast' | 'live' | 'unknown';
+  resolutionEligible?: boolean;
+  relevance?: 'overlap' | 'context';
+  observedAt?: string;
+  retrievedAt?: string;
+  areaLabel?: string;
+  caveat?: string;
+  aliases?: string[];
+  relatedSources?: Array<{ name: string; url: string }>;
+  publisherSeverity?: string;
+  certainty?: string;
 }
 
 export interface SourceStatus {
@@ -48,6 +67,10 @@ export interface SourceStatus {
   state: SourceState;
   checkedAt: string;
   message?: string;
+  scope?: 'event' | 'current' | 'discovery';
+  limitations?: string[];
+  fetchedAt?: string;
+  itemCount?: number;
 }
 
 export interface Suggestion {
@@ -60,6 +83,12 @@ export interface Suggestion {
   planAroundKept: string[];
   avoidCount: number;
   changeMinutes: number;
+  unresolvedContext?: string[];
+  planAroundLost?: string[];
+  planAroundImproved?: string[];
+  checkedAt?: string;
+  coverageNote?: string;
+  candidateCount?: number;
 }
 
 export interface Report {
@@ -69,6 +98,9 @@ export interface Report {
   checkedAt: string;
   sources: SourceStatus[];
   coverageGaps: string[];
+  notices?: string[];
+  reportToken?: string;
+  alternativeNote?: string;
 }
 
 export interface CheckResult {
@@ -79,6 +111,10 @@ export interface CheckResult {
   url: string;
   lastChecked: string;
   message?: string;
+  scope?: 'event' | 'current' | 'discovery';
+  limitations?: string[];
+  fetchedAt?: string;
+  itemCount?: number;
 }
 
 export interface PreferenceOverrides {

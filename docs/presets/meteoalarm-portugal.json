@@ -1,0 +1,22 @@
+[
+  {
+    "id": "meteoalarm-pt",
+    "kind": "meteoalarm",
+    "enabled": false,
+    "name": "MeteoAlarm / Portugal",
+    "endpoint": "https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-portugal",
+    "publicUrl": "https://www.meteoalarm.org/",
+    "licenceUrl": "https://api.meteoalarm.org/edr/v1",
+    "attribution": "MeteoAlarm and the issuing Portuguese meteorological service, CC BY 4.0",
+    "countries": [
+      "PT"
+    ],
+    "timezone": "Europe/Lisbon",
+    "followCapLinks": true,
+    "allowedHosts": [
+      "feeds.meteoalarm.org",
+      "api.meteoalarm.org"
+    ],
+    "ttlSeconds": 300
+  }
+]

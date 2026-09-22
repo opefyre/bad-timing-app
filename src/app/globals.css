@@ -424,3 +424,38 @@ button:focus-visible, input:focus-visible, a:focus-visible, summary:focus-visibl
 .attribution-list { display: flex; flex-wrap: wrap; gap: 8px; }
 .attribution-list span { border: 1px solid var(--line-soft); background: var(--panel); padding: 8px 10px; color: var(--muted); font-size: 10px; }
 .attribution-list a { color: var(--cyan); }
+
+/* v3: evidence, coverage and additional source controls */
+.evidence-tag { display:inline-block; margin-left:10px; color:var(--muted); font-size:10px; letter-spacing:.03em; }
+.finding-time { font-size:13px; font-variant-numeric:tabular-nums; color:var(--cyan); }
+.finding-body .finding-caveat { margin-top:12px; color:var(--muted); font-size:12px; line-height:1.6; }
+.finding-body { min-width:0; overflow-wrap:anywhere; }
+.section-note,.suggestion-note,.report-timestamp { font-size:13px; line-height:1.7; color:var(--muted); }
+.section-note { margin:0 0 18px; }
+.suggestion-note { color:inherit; opacity:.8; }
+.alternative-controls,.radius-buttons { display:flex; flex-wrap:wrap; gap:10px; margin:0 0 20px; }
+.check-option { display:flex; align-items:center; gap:12px; font-size:14px; padding:10px 0; cursor:pointer; }
+.check-option input { width:18px; height:18px; accent-color:var(--lime); }
+.source-row span { min-width:0; overflow-wrap:anywhere; }
+.source-row small { display:block; margin-top:5px; }
+.source-row.state-partial i { background:var(--amber); }
+.source-row.state-not_configured i,.source-row.state-disabled i { background:var(--dim); }
+.context-section { border-top:1px solid var(--line); padding-top:28px; }
+.credits-footer { margin:40px 0 12px; padding:20px 0; border-top:1px solid var(--line-soft); color:var(--muted); font-size:11px; line-height:1.9; }
+.credits-footer nav { display:flex; flex-wrap:wrap; gap:22px; font-size:13px; margin-bottom:12px; }
+.credits-footer p { max-width:900px; }
+.info-copy { line-height:1.8; }
+.provider-card p { line-height:1.7; }
+.provider-state { color:var(--cyan); font-size:12px; }
+.setup-warning { border:1px solid var(--amber); padding:16px; line-height:1.7; font-size:14px; }
+@media(max-width:640px){.alternative-controls { flex-direction:column; }.evidence-tag{display:block;margin:6px 0 0;}.report-actions{flex-wrap:wrap;gap:8px;}.source-grid{grid-template-columns:1fr;}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important;}}
+
+.info-nav{display:flex;flex-wrap:wrap;gap:22px;padding:0 0 28px;color:var(--lime);font-size:13px}.info-nav a{text-underline-offset:5px}.deployment-notice{border:1px solid var(--amber);padding:18px;color:var(--amber);font-size:14px;line-height:1.6}.provider-card p{overflow-wrap:anywhere}.source-setup{color:var(--cyan)!important;font-size:12px!important}.info-copy a,.info-grid a,.attribution-list a{color:var(--cyan);text-underline-offset:3px}.info-copy+.info-copy{margin-top:14px}.info-section h2{scroll-margin-top:20px}
+
+/* Provider cards keep the identity separate from request and licence details. */
+.provider-card { grid-template-columns: repeat(2,minmax(0,1fr)); align-items:start; gap:14px 20px; }
+.provider-card > div:first-child, .provider-card > h3, .provider-card > .provider-links { grid-column:1 / -1; }
+.provider-card p { font-size:13px; }
+.provider-card h3 { font-size:16px; }
+@media(max-width:640px){.provider-card{grid-template-columns:1fr;}}

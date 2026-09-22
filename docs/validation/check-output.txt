@@ -1,0 +1,674 @@
+
+> bad-timing-app@3.0.0 check
+> npm run lint && npm run typecheck && npm test
+
+
+> bad-timing-app@3.0.0 lint
+> eslint src
+
+
+> bad-timing-app@3.0.0 typecheck
+> tsc --noEmit
+
+
+> bad-timing-app@3.0.0 test
+> node --require ./scripts/register.cjs --test tests/*.test.cjs
+
+TAP version 13
+# Subtest: TomTom uses documented Orbis endpoint, headers and filters
+ok 1 - TomTom uses documented Orbis endpoint, headers and filters
+  ---
+  duration_ms: 97.088557
+  type: 'test'
+  ...
+# Subtest: TomTom live accident never becomes a resolvable scheduled conflict
+ok 2 - TomTom live accident never becomes a resolvable scheduled conflict
+  ---
+  duration_ms: 4.723384
+  type: 'test'
+  ...
+# Subtest: TomTom missing geometry is partial, not silently clear
+ok 3 - TomTom missing geometry is partial, not silently clear
+  ---
+  duration_ms: 0.160797
+  type: 'test'
+  ...
+# Subtest: Missing TomTom key makes no outbound call
+ok 4 - Missing TomTom key makes no outbound call
+  ---
+  duration_ms: 0.315455
+  type: 'test'
+  ...
+# Subtest: Transitland queries nearby stops with explicit alert inclusion and API key
+ok 5 - Transitland queries nearby stops with explicit alert inclusion and API key
+  ---
+  duration_ms: 1.906912
+  type: 'test'
+  ...
+# Subtest: Transitland follows serving route and agency alerts without claiming full coverage
+ok 6 - Transitland follows serving route and agency alerts without claiming full coverage
+  ---
+  duration_ms: 3.483987
+  type: 'test'
+  ...
+# Subtest: Ticketmaster serializes dates without milliseconds and uses geoPoint
+ok 7 - Ticketmaster serializes dates without milliseconds and uses geoPoint
+  ---
+  duration_ms: 10.926951
+  type: 'test'
+  ...
+# Subtest: Commercial Ticketmaster requests are gated without permission
+ok 8 - Commercial Ticketmaster requests are gated without permission
+  ---
+  duration_ms: 0.3328
+  type: 'test'
+  ...
+# Subtest: Football uses an exclusive upper date and labels the estimated duration
+ok 9 - Football uses an exclusive upper date and labels the estimated duration
+  ---
+  duration_ms: 28.031812
+  type: 'test'
+  ...
+# Subtest: TVmaze checks adjacent broadcast dates for an exact programme ID
+ok 10 - TVmaze checks adjacent broadcast dates for an exact programme ID
+  ---
+  duration_ms: 45.958022
+  type: 'test'
+  ...
+# Subtest: TVmaze does not fabricate an unknown episode duration
+ok 11 - TVmaze does not fabricate an unknown episode duration
+  ---
+  duration_ms: 1.481805
+  type: 'test'
+  ...
+# Subtest: MET rounds coordinates, identifies itself, and interprets forecast period totals
+ok 12 - MET rounds coordinates, identifies itself, and interprets forecast period totals
+  ---
+  duration_ms: 17.766076
+  type: 'test'
+  ...
+# Subtest: MET dates outside its returned horizon are not checked clear
+ok 13 - MET dates outside its returned horizon are not checked clear
+  ---
+  duration_ms: 1.012222
+  type: 'test'
+  ...
+# Subtest: MET six-hour values are not labelled as one-hour rainfall
+ok 14 - MET six-hour values are not labelled as one-hour rainfall
+  ---
+  duration_ms: 0.368804
+  type: 'test'
+  ...
+# Subtest: Sunrise-Sunset v2 range responses find the actual night interval
+ok 15 - Sunrise-Sunset v2 range responses find the actual night interval
+  ---
+  duration_ms: 25.601898
+  type: 'test'
+  ...
+# Subtest: Polar daylight is not accidentally parsed as missing solar data
+ok 16 - Polar daylight is not accidentally parsed as missing solar data
+  ---
+  duration_ms: 1.099411
+  type: 'test'
+  ...
+# Subtest: UK calendar honours the selected division and year coverage
+ok 17 - UK calendar honours the selected division and year coverage
+  ---
+  duration_ms: 19.643163
+  type: 'test'
+  ...
+# Subtest: TfL chooses matching validity rather than an unrelated first window
+ok 18 - TfL chooses matching validity rather than an unrelated first window
+  ---
+  duration_ms: 18.59695
+  type: 'test'
+  ...
+# Subtest: TfL validates the StopPoint response instead of treating errors as no stops
+ok 19 - TfL validates the StopPoint response instead of treating errors as no stops
+  ---
+  duration_ms: 0.946516
+  type: 'test'
+  ...
+# Subtest: OpenHolidays requests public and school data and respects inclusive end date
+ok 20 - OpenHolidays requests public and school data and respects inclusive end date
+  ---
+  duration_ms: 8.026605
+  type: 'test'
+  ...
+# Subtest: An unmatchable holiday subdivision remains incomplete, not invented
+ok 21 - An unmatchable holiday subdivision remains incomplete, not invented
+  ---
+  duration_ms: 1.428786
+  type: 'test'
+  ...
+# Subtest: GDELT is opt-in and receives city words, not guessed coordinates
+ok 22 - GDELT is opt-in and receives city words, not guessed coordinates
+  ---
+  duration_ms: 2.506095
+  type: 'test'
+  ...
+# Subtest: GDELT is not called when news is disabled
+ok 23 - GDELT is not called when news is disabled
+  ---
+  duration_ms: 0.305089
+  type: 'test'
+  ...
+# Subtest: IPMA district ISO code resolves Lisbon even with English state text
+ok 24 - IPMA district ISO code resolves Lisbon even with English state text
+  ---
+  duration_ms: 2.202007
+  type: 'test'
+  ...
+# Subtest: NWS uses point-matched active alerts and a real application identity
+ok 25 - NWS uses point-matched active alerts and a real application identity
+  ---
+  duration_ms: 2.173125
+  type: 'test'
+  ...
+# Subtest: GDACS uses regional RSS context without an invented affected boundary
+ok 26 - GDACS uses regional RSS context without an invented affected boundary
+  ---
+  duration_ms: 4.714751
+  type: 'test'
+  ...
+# Subtest: EONET uses west/north/east/south bbox and observation context
+ok 27 - EONET uses west/north/east/south bbox and observation context
+  ---
+  duration_ms: 1.766033
+  type: 'test'
+  ...
+# Subtest: FIRMS uses area CSV MAP_KEY endpoint and does not call hotspots evacuations
+ok 28 - FIRMS uses area CSV MAP_KEY endpoint and does not call hotspots evacuations
+  ---
+  duration_ms: 3.566669
+  type: 'test'
+  ...
+# Subtest: USGS query is recent observations, not a future earthquake forecast
+ok 29 - USGS query is recent observations, not a future earthquake forecast
+  ---
+  duration_ms: 2.722625
+  type: 'test'
+  ...
+# Subtest: Future gatherings do not trigger current-only natural event queries
+ok 30 - Future gatherings do not trigger current-only natural event queries
+  ---
+  duration_ms: 1.0312
+  type: 'test'
+  ...
+# Subtest: Air-quality model preserves nulls and full event coverage
+ok 31 - Air-quality model preserves nulls and full event coverage
+  ---
+  duration_ms: 1.822507
+  type: 'test'
+  ...
+# Subtest: Commercial air-quality and Radar access cannot silently use restricted free data
+ok 32 - Commercial air-quality and Radar access cannot silently use restricted free data
+  ---
+  duration_ms: 0.450674
+  type: 'test'
+  ...
+# Subtest: SeatGeek credentials are Basic auth and an unknown event end remains context
+ok 33 - SeatGeek credentials are Basic auth and an unknown event end remains context
+  ---
+  duration_ms: 1.600811
+  type: 'test'
+  ...
+# Subtest: Radar reads documented annotations, uses bearer auth and remains regional
+ok 34 - Radar reads documented annotations, uses bearer auth and remains regional
+  ---
+  duration_ms: 2.731097
+  type: 'test'
+  ...
+# Subtest: Geocode text search does not accidentally reverse-geocode 0,0
+ok 35 - Geocode text search does not accidentally reverse-geocode 0,0
+  ---
+  duration_ms: 81.873408
+  type: 'test'
+  ...
+# Subtest: OpenHolidays does not call an unpublished empty year holiday-free
+ok 36 - OpenHolidays does not call an unpublished empty year holiday-free
+  ---
+  duration_ms: 1.213319
+  type: 'test'
+  ...
+# Subtest: SeatGeek missing client secret is setup state, not a live API failure
+ok 37 - SeatGeek missing client secret is setup state, not a live API failure
+  ---
+  duration_ms: 0.373561
+  type: 'test'
+  ...
+# Subtest: venue wall time becomes the correct UTC instant
+ok 38 - venue wall time becomes the correct UTC instant
+  ---
+  duration_ms: 13.436782
+  type: 'test'
+  ...
+# Subtest: invalid calendar day cannot silently roll into next month
+ok 39 - invalid calendar day cannot silently roll into next month
+  ---
+  duration_ms: 0.299412
+  type: 'test'
+  ...
+# Subtest: spring DST nonexistent time is rejected
+ok 40 - spring DST nonexistent time is rejected
+  ---
+  duration_ms: 0.391988
+  type: 'test'
+  ...
+# Subtest: fall DST repeated time resolves explicitly to first occurrence
+ok 41 - fall DST repeated time resolves explicitly to first occurrence
+  ---
+  duration_ms: 0.283358
+  type: 'test'
+  ...
+# Subtest: end boundary is non-overlapping
+ok 42 - end boundary is non-overlapping
+  ---
+  duration_ms: 0.111294
+  type: 'test'
+  ...
+# Subtest: validation whitelists properties instead of trusting the posted report
+ok 43 - validation whitelists properties instead of trusting the posted report
+  ---
+  duration_ms: 0.517793
+  type: 'test'
+  ...
+# Subtest: invalid coordinates, duration, radius and preferences are rejected
+ok 44 - invalid coordinates, duration, radius and preferences are rejected
+  ---
+  duration_ms: 0.564342
+  type: 'test'
+  ...
+# Subtest: CSV handles escaped quotes, commas and a UTF-8 BOM
+ok 45 - CSV handles escaped quotes, commas and a UTF-8 BOM
+  ---
+  duration_ms: 5.187679
+  type: 'test'
+  ...
+# Subtest: XML uses local namespace names and decodes entities without fetching
+ok 46 - XML uses local namespace names and decodes entities without fetching
+  ---
+  duration_ms: 1.131469
+  type: 'test'
+  ...
+# Subtest: XML rejects external entity and document type declarations
+ok 47 - XML rejects external entity and document type declarations
+  ---
+  duration_ms: 0.409193
+  type: 'test'
+  ...
+# Subtest: geometry: venue inside polygon, hole excluded, no fictitious MultiPoint line
+ok 48 - geometry: venue inside polygon, hole excluded, no fictitious MultiPoint line
+  ---
+  duration_ms: 0.754392
+  type: 'test'
+  ...
+# Subtest: CAP polygon order is lat/lon and venue containment is required
+ok 49 - CAP polygon order is lat/lon and venue containment is required
+  ---
+  duration_ms: 15.090489
+  type: 'test'
+  ...
+# Subtest: CAP test alerts and cancelled referenced alerts are excluded
+ok 50 - CAP test alerts and cancelled referenced alerts are excluded
+  ---
+  duration_ms: 0.953246
+  type: 'test'
+  ...
+# Subtest: CAP unsupported geocode is partial rather than a false no-warning result
+ok 51 - CAP unsupported geocode is partial rather than a false no-warning result
+  ---
+  duration_ms: 0.391076
+  type: 'test'
+  ...
+# Subtest: DATEX II supports explicit point coordinates and bounded validity
+ok 52 - DATEX II supports explicit point coordinates and bounded validity
+  ---
+  duration_ms: 0.745699
+  type: 'test'
+  ...
+# Subtest: ICS UTC bounded event overlaps and carries explicit provenance
+ok 53 - ICS UTC bounded event overlaps and carries explicit provenance
+  ---
+  duration_ms: 1.104328
+  type: 'test'
+  ...
+# Subtest: ICS daily recurrence respects EXDATE
+ok 54 - ICS daily recurrence respects EXDATE
+  ---
+  duration_ms: 1.544748
+  type: 'test'
+  ...
+# Subtest: ICS weekly recurrence returns correct weekday and unknown monthly rule is partial
+ok 55 - ICS weekly recurrence returns correct weekday and unknown monthly rule is partial
+  ---
+  duration_ms: 0.526467
+  type: 'test'
+  ...
+# Subtest: ICS missing location is not silently geocoded from title
+ok 56 - ICS missing location is not silently geocoded from title
+  ---
+  duration_ms: 0.208427
+  type: 'test'
+  ...
+# Subtest: GTFS protobuf decoder uses correct Alert fields and scoped stops
+ok 57 - GTFS protobuf decoder uses correct Alert fields and scoped stops
+  ---
+  duration_ms: 1.755779
+  type: 'test'
+  ...
+# Subtest: GTFS rejects stale and differential snapshots rather than empty success
+ok 58 - GTFS rejects stale and differential snapshots rather than empty success
+  ---
+  duration_ms: 0.378418
+  type: 'test'
+  ...
+# Subtest: WZDx schema reads core_details and UTC planned work periods
+ok 59 - WZDx schema reads core_details and UTC planned work periods
+  ---
+  duration_ms: 0.415773
+  type: 'test'
+  ...
+# Subtest: civic publication date is context, never scheduled incident time
+ok 60 - civic publication date is context, never scheduled incident time
+  ---
+  duration_ms: 0.66482
+  type: 'test'
+  ...
+# Subtest: RSS publication timestamps remain observations, no future date inferred
+ok 61 - RSS publication timestamps remain observations, no future date inferred
+  ---
+  duration_ms: 0.470253
+  type: 'test'
+  ...
+# Subtest: configuration rejects duplicate feeds, insecure URLs and embedded credentials
+ok 62 - configuration rejects duplicate feeds, insecure URLs and embedded credentials
+  ---
+  duration_ms: 15.260721
+  type: 'test'
+  ...
+# Subtest: SSRF public-address validator blocks metadata, private and loopback addresses
+ok 63 - SSRF public-address validator blocks metadata, private and loopback addresses
+  ---
+  duration_ms: 3.954781
+  type: 'test'
+  ...
+# Subtest: HTTP deduplicates concurrent requests
+ok 64 - HTTP deduplicates concurrent requests
+  ---
+  duration_ms: 16.815214
+  type: 'test'
+  ...
+# Subtest: HTTP 429 is unavailable, cached as cooldown and secrets stay out of safe errors
+ok 65 - HTTP 429 is unavailable, cached as cooldown and secrets stay out of safe errors
+  ---
+  duration_ms: 1.015818
+  type: 'test'
+  ...
+# Subtest: HTTP honours no-store and rejects oversized payloads
+ok 66 - HTTP honours no-store and rejects oversized payloads
+  ---
+  duration_ms: 1.361798
+  type: 'test'
+  ...
+# Subtest: A disappeared scheduled overlap can be resolved after an actual successful recheck
+ok 67 - A disappeared scheduled overlap can be resolved after an actual successful recheck
+  ---
+  duration_ms: 22.647352
+  type: 'test'
+  ...
+# Subtest: An alternative cannot appear improved because its source becomes unavailable
+ok 68 - An alternative cannot appear improved because its source becomes unavailable
+  ---
+  duration_ms: 0.264099
+  type: 'test'
+  ...
+# Subtest: An alternative cannot appear improved because its source becomes partial
+ok 69 - An alternative cannot appear improved because its source becomes partial
+  ---
+  duration_ms: 0.197972
+  type: 'test'
+  ...
+# Subtest: An alternative cannot appear improved because its source becomes out_of_range
+ok 70 - An alternative cannot appear improved because its source becomes out_of_range
+  ---
+  duration_ms: 0.180086
+  type: 'test'
+  ...
+# Subtest: An alternative cannot appear improved because its source becomes not_configured
+ok 71 - An alternative cannot appear improved because its source becomes not_configured
+  ---
+  duration_ms: 0.220275
+  type: 'test'
+  ...
+# Subtest: Missing candidate source is not evidence of conflict resolution
+ok 72 - Missing candidate source is not evidence of conflict resolution
+  ---
+  duration_ms: 0.233534
+  type: 'test'
+  ...
+# Subtest: Current incidents remain unresolved even if absent from a later candidate response
+ok 73 - Current incidents remain unresolved even if absent from a later candidate response
+  ---
+  duration_ms: 0.826719
+  type: 'test'
+  ...
+# Subtest: An unknown end cannot be resolved just by changing date
+ok 74 - An unknown end cannot be resolved just by changing date
+  ---
+  duration_ms: 0.500037
+  type: 'test'
+  ...
+# Subtest: An organiser neutral choice excludes a finding from resolution objectives
+ok 75 - An organiser neutral choice excludes a finding from resolution objectives
+  ---
+  duration_ms: 0.625802
+  type: 'test'
+  ...
+# Subtest: Stable weather policy keys preserve intent across candidate times
+ok 76 - Stable weather policy keys preserve intent across candidate times
+  ---
+  duration_ms: 0.775103
+  type: 'test'
+  ...
+# Subtest: A new high-impact issue vetoes an otherwise attractive alternative
+ok 77 - A new high-impact issue vetoes an otherwise attractive alternative
+  ---
+  duration_ms: 0.247175
+  type: 'test'
+  ...
+# Subtest: Smaller newly introduced trade-offs are explicitly reported
+ok 78 - Smaller newly introduced trade-offs are explicitly reported
+  ---
+  duration_ms: 6.40954
+  type: 'test'
+  ...
+# Subtest: Losing a plan-around event is visible rather than silently optimal
+ok 79 - Losing a plan-around event is visible rather than silently optimal
+  ---
+  duration_ms: 0.646784
+  type: 'test'
+  ...
+# Subtest: A plan-around-only comparison can improve alignment with a real scheduled start
+ok 80 - A plan-around-only comparison can improve alignment with a real scheduled start
+  ---
+  duration_ms: 0.645942
+  type: 'test'
+  ...
+# Subtest: News publication time never becomes a plan-around occurrence time
+ok 81 - News publication time never becomes a plan-around occurrence time
+  ---
+  duration_ms: 0.435231
+  type: 'test'
+  ...
+# Subtest: Earlier candidate times stay on the chosen day and are sorted by minimum change
+ok 82 - Earlier candidate times stay on the chosen day and are sorted by minimum change
+  ---
+  duration_ms: 11.709786
+  type: 'test'
+  ...
+# Subtest: Another-day candidates preserve the chosen wall-clock time
+ok 83 - Another-day candidates preserve the chosen wall-clock time
+  ---
+  duration_ms: 0.401412
+  type: 'test'
+  ...
+# Subtest: The optimiser invokes the analyser, rather than calculating disappeared conflicts locally
+ok 84 - The optimiser invokes the analyser, rather than calculating disappeared conflicts locally
+  ---
+  duration_ms: 1.323742
+  type: 'test'
+  ...
+# Subtest: No recheck suggestions are fabricated for a context-only report
+ok 85 - No recheck suggestions are fabricated for a context-only report
+  ---
+  duration_ms: 0.40694
+  type: 'test'
+  ...
+# Subtest: Evidence normalisation disables resolution when source coverage is partial
+ok 86 - Evidence normalisation disables resolution when source coverage is partial
+  ---
+  duration_ms: 0.819949
+  type: 'test'
+  ...
+# Subtest: Untrusted markup and executable source URLs are removed before report display
+ok 87 - Untrusted markup and executable source URLs are removed before report display
+  ---
+  duration_ms: 0.220545
+  type: 'test'
+  ...
+# Subtest: Deduplication does not collapse separate occurrence windows
+ok 88 - Deduplication does not collapse separate occurrence windows
+  ---
+  duration_ms: 0.266283
+  type: 'test'
+  ...
+# Subtest: Whitespace-only venue names fail validation
+ok 89 - Whitespace-only venue names fail validation
+  ---
+  duration_ms: 0.532796
+  type: 'test'
+  ...
+# Subtest: All-source failure does not produce a checked result from any failing API
+ok 90 - All-source failure does not produce a checked result from any failing API
+  ---
+  duration_ms: 38.171101
+  type: 'test'
+  ...
+# Subtest: ArcGIS sends spatial WGS84 layer queries and reads GeoJSON properties
+ok 91 - ArcGIS sends spatial WGS84 layer queries and reads GeoJSON properties
+  ---
+  duration_ms: 40.806768
+  type: 'test'
+  ...
+# Subtest: Socrata uses SODA3 POST, JSON and a token; pagination is one based
+ok 92 - Socrata uses SODA3 POST, JSON and a token; pagination is one based
+  ---
+  duration_ms: 2.479576
+  type: 'test'
+  ...
+# Subtest: CKAN checks success:false even when the HTTP status is 200
+ok 93 - CKAN checks success:false even when the HTTP status is 200
+  ---
+  duration_ms: 1.020795
+  type: 'test'
+  ...
+# Subtest: CKAN DataStore reads mapped fields and tracks bounded pagination
+ok 94 - CKAN DataStore reads mapped fields and tracks bounded pagination
+  ---
+  duration_ms: 0.881199
+  type: 'test'
+  ...
+# Subtest: Open311 sends recent-open filters but does not expose reporter data
+ok 95 - Open311 sends recent-open filters but does not expose reporter data
+  ---
+  duration_ms: 0.977992
+  type: 'test'
+  ...
+# Subtest: Missing regional credentials skip the request and never count as checked
+ok 96 - Missing regional credentials skip the request and never count as checked
+  ---
+  duration_ms: 0.37965
+  type: 'test'
+  ...
+# Subtest: Every shipped feed example and optional preset validates but remains disabled
+ok 97 - Every shipped feed example and optional preset validates but remains disabled
+  ---
+  duration_ms: 2.572754
+  type: 'test'
+  ...
+# Subtest: Civic scheduled adapter does not invent geometry for a row without a location
+ok 98 - Civic scheduled adapter does not invent geometry for a row without a location
+  ---
+  duration_ms: 0.141489
+  type: 'test'
+  ...
+# Subtest: Civic dataset publication timestamps are not occurrence timestamps
+ok 99 - Civic dataset publication timestamps are not occurrence timestamps
+  ---
+  duration_ms: 0.597881
+  type: 'test'
+  ...
+# Subtest: Mobility CSV discovery joins GTFS-RT alerts to static feed country scope
+ok 100 - Mobility CSV discovery joins GTFS-RT alerts to static feed country scope
+  ---
+  duration_ms: 0.887088
+  type: 'test'
+  ...
+# Subtest: Mobility auth exchanges refresh token then checks metadata without printing credentials
+ok 101 - Mobility auth exchanges refresh token then checks metadata without printing credentials
+  ---
+  duration_ms: 0.903843
+  type: 'test'
+  ...
+# Subtest: ArcGIS discovery requests public Feature Services, not private account content
+ok 102 - ArcGIS discovery requests public Feature Services, not private account content
+  ---
+  duration_ms: 0.964372
+  type: 'test'
+  ...
+# Subtest: API rejects a cross-site request before calling providers
+ok 103 - API rejects a cross-site request before calling providers
+  ---
+  duration_ms: 32.411238
+  type: 'test'
+  ...
+# Subtest: API enforces JSON request bodies and preserves no raw upstream error text
+ok 104 - API enforces JSON request bodies and preserves no raw upstream error text
+  ---
+  duration_ms: 1.829508
+  type: 'test'
+  ...
+# Subtest: Current-only data cannot imply that future schedules were checked
+ok 105 - Current-only data cannot imply that future schedules were checked
+  ---
+  duration_ms: 28.590275
+  type: 'test'
+  ...
+# Subtest: Failed schedule checks do not render a clear-date headline
+ok 106 - Failed schedule checks do not render a clear-date headline
+  ---
+  duration_ms: 2.304458
+  type: 'test'
+  ...
+# Subtest: Successful empty schedule queries still state their limited meaning
+ok 107 - Successful empty schedule queries still state their limited meaning
+  ---
+  duration_ms: 2.146735
+  type: 'test'
+  ...
+# Subtest: Source information shows configuration state without serializing credentials
+ok 108 - Source information shows configuration state without serializing credentials
+  ---
+  duration_ms: 141.069159
+  type: 'test'
+  ...
+1..108
+# tests 108
+# suites 0
+# pass 108
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1827.762395

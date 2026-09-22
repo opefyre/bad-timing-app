@@ -1,58 +1,20 @@
-import { CheckResult, EventInput } from '@/types';
-import { cached } from './cache';
-import { fetchJson } from './http';
-import { eventWindow, formatInstant, localDate } from './time';
+import { EventInput } from '@/types';
+import { getJson } from './http';
+import { run,skip } from './connectors/base';
+import { arr,obj,str,iso,windowFor,finding,during } from './connectors/util';
+import { addLocalDays,instantToLocal,zonedLocalToUtc } from './time';
 import { defaultPreference } from './preferences';
-
-type SunResponse = {
-  date?: string;
-  tzid?: string;
-  sunrise?: string | null;
-  sunset?: string | null;
-  error?: string;
-  message?: string;
-};
-
-export async function checkDaylight(input: EventInput): Promise<CheckResult> {
-  const checkedAt = new Date().toISOString();
-  const base = { source: 'Sunrise-Sunset API', sourceId: 'daylight', url: 'https://sunrise-sunset.org/api', lastChecked: checkedAt };
-  if (!input.isOutdoor) return { ...base, state: 'not_applicable', data: [], message: 'Indoor event' };
-  const { lat, lng, timezone } = input.venue;
-  if (typeof lat !== 'number' || typeof lng !== 'number' || !timezone) return { ...base, state: 'not_applicable', data: [], message: 'Location or timezone unavailable' };
-
-  try {
-    const date = localDate(input.dateTime);
-    const data = await cached(`sun:${lat.toFixed(3)}:${lng.toFixed(3)}:${date}`, 12 * 60 * 60_000, () => fetchJson<SunResponse>(`https://api.sunrise-sunset.org/v2?lat=${lat}&lng=${lng}&date=${date}&tz=${encodeURIComponent(timezone)}`));
-    if (!data.sunrise || !data.sunset) return { ...base, state: 'out_of_range', data: [], message: data.message || 'Sunrise or sunset unavailable for this date/location' };
-    const sunrise = new Date(data.sunrise);
-    const sunset = new Date(data.sunset);
-    const { start, end } = eventWindow(input.dateTime, input.durationMinutes, timezone);
-    const conflicts = [];
-    if (start >= sunset) {
-      conflicts.push({
-        id: `daylight-after-${date}`, type: 'daylight' as const, title: 'Starts after sunset',
-        description: `Sunset is ${formatInstant(sunset.toISOString(), timezone, { hour: '2-digit', minute: '2-digit' })}`,
-        impact: 'high' as const, source: base.source, sourceUrl: base.url,
-        preference: defaultPreference('daylight', input), startsAt: sunset.toISOString(),
-      });
-    } else if (end > sunset) {
-      conflicts.push({
-        id: `daylight-during-${date}`, type: 'daylight' as const, title: 'Sunset lands inside your event',
-        description: `Sunset is ${formatInstant(sunset.toISOString(), timezone, { hour: '2-digit', minute: '2-digit' })}`,
-        impact: 'high' as const, source: base.source, sourceUrl: base.url,
-        preference: defaultPreference('daylight', input), startsAt: sunset.toISOString(),
-      });
-    }
-    if (start < sunrise) {
-      conflicts.push({
-        id: `daylight-before-${date}`, type: 'daylight' as const, title: 'Starts before sunrise',
-        description: `Sunrise is ${formatInstant(sunrise.toISOString(), timezone, { hour: '2-digit', minute: '2-digit' })}`,
-        impact: 'medium' as const, source: base.source, sourceUrl: base.url,
-        preference: defaultPreference('daylight', input), startsAt: sunrise.toISOString(),
-      });
-    }
-    return { ...base, state: 'checked', data: conflicts };
-  } catch (error) {
-    return { ...base, state: 'unavailable', data: [], message: error instanceof Error ? error.message : 'Request failed' };
-  }
+export async function checkDaylight(input:EventInput){
+ if(!input.isOutdoor)return skip('daylight','Indoor event');
+ return run('daylight',input,async()=>{const date=input.dateTime.slice(0,10);const next=addLocalDays(`${date}T00:00`,1).slice(0,10);const w=windowFor(input);
+  const u=new URL('https://api.sunrise-sunset.org/v2');u.search=new URLSearchParams({lat:String(input.venue.lat),lng:String(input.venue.lng),date_start:date,date_end:next,tz:input.venue.timezone!}).toString();
+  const response=await getJson(u.toString(),86400000),root=obj(response.data);if(!Array.isArray(root.days))throw new Error('Unexpected daylight response');let partial=false;
+  const days=arr(root.days).map(obj);const wanted=new Set([date,instantToLocal(new Date(w.end.getTime()-1),input.venue.timezone!).slice(0,10)]);for(const d of wanted)if(!days.some(r=>r.date===d))partial=true;
+  const data=days.flatMap(d=>{const day=str(d.date);if(!wanted.has(day))return [];const ds=zonedLocalToUtc(day+'T00:00',input.venue.timezone!).toISOString(),de=zonedLocalToUtc(addLocalDays(day+'T00:00',1),input.venue.timezone!).toISOString();
+   if(d.sun_status==='midnight_sun')return [];const rise=iso(d.sunrise),set=iso(d.sunset);
+   const periods:Array<[string,string,string]>=d.sun_status==='polar_night'?[[ds,de,'Sun does not rise']]:rise&&set?[[ds,rise,'Before sunrise'],[set,de,'After sunset']]:[];
+   if(!periods.length){partial=true;return [];}
+   return periods.filter(([s,e])=>during(input,s,e)).map(([s,e,label])=>finding(`dark:${day}:${label}`,'daylight',label,'https://sunrise-sunset.org/',{type:'daylight',policyKey:'daylight:darkness',source:'Sunrise-Sunset.org',description:'Part of the event falls outside sunrise-to-sunset daylight.',startsAt:s,endsAt:e,preference:defaultPreference('daylight',input),evidence:'structured',timing:'scheduled',relevance:'overlap',resolutionEligible:true,impact:'medium',caveat:'Twilight, terrain and cloud cover affect usable light.'}));
+  });return {data,partial,fetchedAt:response.fetchedAt,message:partial?'Some solar times are unavailable for this place and date.':undefined};
+ });
 }

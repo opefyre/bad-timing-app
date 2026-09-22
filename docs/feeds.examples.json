@@ -1,0 +1,323 @@
+[
+  {
+    "id": "example-cap",
+    "kind": "cap",
+    "enabled": false,
+    "name": "Illustrative cap publisher",
+    "endpoint": "https://feed.example.org/data",
+    "publicUrl": "https://feed.example.org/",
+    "licenceUrl": "https://feed.example.org/licence",
+    "attribution": "Replace with actual publisher attribution",
+    "countries": [
+      "PT"
+    ],
+    "timezone": "Europe/Lisbon",
+    "bounds": [
+      -9.3,
+      38.65,
+      -9.05,
+      38.85
+    ],
+    "followCapLinks": true,
+    "allowedHosts": [
+      "feed.example.org"
+    ]
+  },
+  {
+    "id": "example-meteoalarm",
+    "kind": "meteoalarm",
+    "enabled": false,
+    "name": "Illustrative meteoalarm publisher",
+    "endpoint": "https://feed.example.org/data",
+    "publicUrl": "https://feed.example.org/",
+    "licenceUrl": "https://feed.example.org/licence",
+    "attribution": "Replace with actual publisher attribution",
+    "countries": [
+      "PT"
+    ],
+    "timezone": "Europe/Lisbon",
+    "bounds": [
+      -9.3,
+      38.65,
+      -9.05,
+      38.85
+    ],
+    "followCapLinks": true,
+    "allowedHosts": [
+      "feed.example.org"
+    ]
+  },
+  {
+    "id": "example-gtfs",
+    "kind": "gtfs",
+    "enabled": false,
+    "name": "Illustrative gtfs publisher",
+    "endpoint": "https://feed.example.org/data",
+    "publicUrl": "https://feed.example.org/",
+    "licenceUrl": "https://feed.example.org/licence",
+    "attribution": "Replace with actual publisher attribution",
+    "countries": [
+      "PT"
+    ],
+    "timezone": "Europe/Lisbon",
+    "bounds": [
+      -9.3,
+      38.65,
+      -9.05,
+      38.85
+    ],
+    "gtfs": {
+      "stopIds": [
+        "ACTUAL_FEED_STOP_ID"
+      ],
+      "routeIds": [
+        "ACTUAL_FEED_ROUTE_ID"
+      ]
+    },
+    "auth": {
+      "env": "GTFS_API_KEY",
+      "header": "x-api-key"
+    }
+  },
+  {
+    "id": "example-datex",
+    "kind": "datex",
+    "enabled": false,
+    "name": "Illustrative datex publisher",
+    "endpoint": "https://feed.example.org/data",
+    "publicUrl": "https://feed.example.org/",
+    "licenceUrl": "https://feed.example.org/licence",
+    "attribution": "Replace with actual publisher attribution",
+    "countries": [
+      "PT"
+    ],
+    "timezone": "Europe/Lisbon",
+    "bounds": [
+      -9.3,
+      38.65,
+      -9.05,
+      38.85
+    ]
+  },
+  {
+    "id": "example-wzdx",
+    "kind": "wzdx",
+    "enabled": false,
+    "name": "Illustrative wzdx publisher",
+    "endpoint": "https://feed.example.org/data",
+    "publicUrl": "https://feed.example.org/",
+    "licenceUrl": "https://feed.example.org/licence",
+    "attribution": "Replace with actual publisher attribution",
+    "countries": [
+      "PT"
+    ],
+    "timezone": "Europe/Lisbon",
+    "bounds": [
+      -9.3,
+      38.65,
+      -9.05,
+      38.85
+    ]
+  },
+  {
+    "id": "example-arcgis",
+    "kind": "arcgis",
+    "enabled": false,
+    "name": "Illustrative arcgis publisher",
+    "endpoint": "https://feed.example.org/arcgis/rest/services/roadworks/FeatureServer/0",
+    "publicUrl": "https://feed.example.org/",
+    "licenceUrl": "https://feed.example.org/licence",
+    "attribution": "Replace with actual publisher attribution",
+    "countries": [
+      "PT"
+    ],
+    "timezone": "Europe/Lisbon",
+    "bounds": [
+      -9.3,
+      38.65,
+      -9.05,
+      38.85
+    ],
+    "fields": {
+      "id": "record_id",
+      "title": "title",
+      "start": "start_time",
+      "end": "end_time",
+      "lat": "latitude",
+      "lon": "longitude",
+      "updated": "updated_at"
+    },
+    "timeMode": "scheduled",
+    "orderBy": "record_id",
+    "pageLimit": 2,
+    "limit": 200
+  },
+  {
+    "id": "example-socrata",
+    "kind": "socrata",
+    "enabled": false,
+    "name": "Illustrative socrata publisher",
+    "endpoint": "https://feed.example.org",
+    "publicUrl": "https://feed.example.org/",
+    "licenceUrl": "https://feed.example.org/licence",
+    "attribution": "Replace with actual publisher attribution",
+    "countries": [
+      "PT"
+    ],
+    "timezone": "Europe/Lisbon",
+    "bounds": [
+      -9.3,
+      38.65,
+      -9.05,
+      38.85
+    ],
+    "fields": {
+      "id": "record_id",
+      "title": "title",
+      "start": "start_time",
+      "end": "end_time",
+      "lat": "latitude",
+      "lon": "longitude",
+      "updated": "updated_at"
+    },
+    "timeMode": "scheduled",
+    "orderBy": "record_id",
+    "pageLimit": 2,
+    "limit": 200,
+    "datasetId": "abcd-1234",
+    "auth": {
+      "env": "SOCRATA_APP_TOKEN",
+      "header": "X-App-Token"
+    },
+    "where": "start_time < '{{end}}' AND end_time > '{{start}}'"
+  },
+  {
+    "id": "example-ckan",
+    "kind": "ckan",
+    "enabled": false,
+    "name": "Illustrative ckan publisher",
+    "endpoint": "https://feed.example.org",
+    "publicUrl": "https://feed.example.org/",
+    "licenceUrl": "https://feed.example.org/licence",
+    "attribution": "Replace with actual publisher attribution",
+    "countries": [
+      "PT"
+    ],
+    "timezone": "Europe/Lisbon",
+    "bounds": [
+      -9.3,
+      38.65,
+      -9.05,
+      38.85
+    ],
+    "fields": {
+      "id": "record_id",
+      "title": "title",
+      "start": "start_time",
+      "end": "end_time",
+      "lat": "latitude",
+      "lon": "longitude",
+      "updated": "updated_at"
+    },
+    "timeMode": "scheduled",
+    "orderBy": "record_id",
+    "pageLimit": 2,
+    "limit": 200,
+    "resourceId": "ACTUAL_DATASTORE_RESOURCE_ID"
+  },
+  {
+    "id": "example-open311",
+    "kind": "open311",
+    "enabled": false,
+    "name": "Illustrative open311 publisher",
+    "endpoint": "https://feed.example.org/georeport/v2",
+    "publicUrl": "https://feed.example.org/",
+    "licenceUrl": "https://feed.example.org/licence",
+    "attribution": "Replace with actual publisher attribution",
+    "countries": [
+      "PT"
+    ],
+    "timezone": "Europe/Lisbon",
+    "bounds": [
+      -9.3,
+      38.65,
+      -9.05,
+      38.85
+    ]
+  },
+  {
+    "id": "example-rss",
+    "kind": "rss",
+    "enabled": false,
+    "name": "Illustrative rss publisher",
+    "endpoint": "https://feed.example.org/data",
+    "publicUrl": "https://feed.example.org/",
+    "licenceUrl": "https://feed.example.org/licence",
+    "attribution": "Replace with actual publisher attribution",
+    "countries": [
+      "PT"
+    ],
+    "timezone": "Europe/Lisbon",
+    "bounds": [
+      -9.3,
+      38.65,
+      -9.05,
+      38.85
+    ],
+    "staticLocation": {
+      "lat": 38.7223,
+      "lng": -9.1393,
+      "name": "Replace with the actual fixed venue; otherwise remove this field"
+    }
+  },
+  {
+    "id": "example-atom",
+    "kind": "atom",
+    "enabled": false,
+    "name": "Illustrative atom publisher",
+    "endpoint": "https://feed.example.org/data",
+    "publicUrl": "https://feed.example.org/",
+    "licenceUrl": "https://feed.example.org/licence",
+    "attribution": "Replace with actual publisher attribution",
+    "countries": [
+      "PT"
+    ],
+    "timezone": "Europe/Lisbon",
+    "bounds": [
+      -9.3,
+      38.65,
+      -9.05,
+      38.85
+    ],
+    "staticLocation": {
+      "lat": 38.7223,
+      "lng": -9.1393,
+      "name": "Replace with the actual fixed venue; otherwise remove this field"
+    }
+  },
+  {
+    "id": "example-ics",
+    "kind": "ics",
+    "enabled": false,
+    "name": "Illustrative ics publisher",
+    "endpoint": "https://feed.example.org/data",
+    "publicUrl": "https://feed.example.org/",
+    "licenceUrl": "https://feed.example.org/licence",
+    "attribution": "Replace with actual publisher attribution",
+    "countries": [
+      "PT"
+    ],
+    "timezone": "Europe/Lisbon",
+    "bounds": [
+      -9.3,
+      38.65,
+      -9.05,
+      38.85
+    ],
+    "staticLocation": {
+      "lat": 38.7223,
+      "lng": -9.1393,
+      "name": "Replace with the actual fixed venue; otherwise remove this field"
+    }
+  }
+]

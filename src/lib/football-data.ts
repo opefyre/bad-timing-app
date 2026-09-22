@@ -1,3 +1,4 @@
+import { safeMessage } from './http';
 import { CheckResult, EventInput } from '@/types';
 import { cached } from './cache';
 import { fetchJson } from './http';
@@ -22,7 +23,7 @@ function teamMatches(team: string, match: Match) {
   const needle = normalise(team);
   const names = [match.homeTeam.name, match.homeTeam.shortName, match.homeTeam.tla, match.awayTeam.name, match.awayTeam.shortName, match.awayTeam.tla]
     .filter(Boolean).map((value) => normalise(String(value)));
-  return names.some((name) => name === needle || name.includes(needle) || needle.includes(name));
+  return names.some((name) => name === needle);
 }
 
 export async function checkFootballData(input: EventInput): Promise<CheckResult> {
@@ -30,14 +31,14 @@ export async function checkFootballData(input: EventInput): Promise<CheckResult>
   const checkedAt = new Date().toISOString();
   const base = { source: 'football-data.org', sourceId: 'football', url: 'https://www.football-data.org/', lastChecked: checkedAt };
   if (!input.footballTeam) return { ...base, state: 'not_applicable', data: [], message: 'No team selected' };
-  if (!apiKey) return { ...base, state: 'unavailable', data: [], message: 'API key not configured' };
+  if (!apiKey) return { ...base, state: 'not_configured', data: [], message: 'Not connected' };
   const timezone = input.venue.timezone;
   if (!timezone) return { ...base, state: 'unavailable', data: [], message: 'Venue timezone unavailable' };
 
   try {
     const { start, end } = eventWindow(input.dateTime, input.durationMinutes, timezone);
     const queryFrom = new Date(start.getTime() - 6 * 60 * 60_000).toISOString().slice(0, 10);
-    const queryTo = new Date(end.getTime() + 6 * 60 * 60_000).toISOString().slice(0, 10);
+    const queryTo = new Date(end.getTime() + 86400000).toISOString().slice(0, 10);
     const key = `football:${queryFrom}:${queryTo}`;
     const data = await cached(key, 5 * 60_000, async () => {
       const url = new URL('https://api.football-data.org/v4/matches');
@@ -46,7 +47,9 @@ export async function checkFootballData(input: EventInput): Promise<CheckResult>
       return fetchJson<MatchesResponse>(url.toString(), { headers: { 'X-Auth-Token': apiKey } });
     });
 
-    const conflicts = (data.matches ?? []).filter((match) => teamMatches(input.footballTeam!, match)).flatMap((match) => {
+    if(!Array.isArray(data.matches))throw new Error('Unexpected match response');
+    const conflicts = data.matches.filter((match) => teamMatches(input.footballTeam!, match)).flatMap((match) => {
+      if(['CANCELLED','POSTPONED','SUSPENDED'].includes(match.status??''))return [];
       const matchStart = new Date(match.utcDate);
       const matchEnd = new Date(matchStart.getTime() + 120 * 60_000);
       if (!overlaps(start, end, matchStart, matchEnd)) return [];
@@ -61,11 +64,13 @@ export async function checkFootballData(input: EventInput): Promise<CheckResult>
         preference: defaultPreference('sport', input),
         startsAt: match.utcDate,
         endsAt: matchEnd.toISOString(),
+        providerId:'football',evidence:'structured' as const,timing:'scheduled' as const,relevance:'overlap' as const,resolutionEligible:true,
+        caveat:'A two-hour match window is estimated from kickoff. Extra time, delays and schedule changes can extend it.',
       }];
     });
 
-    return { ...base, state: 'checked', data: conflicts };
+    return { ...base, state: 'checked', data: conflicts, message:'Published fixtures in the connected plan only; team names must match a name, short name or abbreviation.' };
   } catch (error) {
-    return { ...base, state: 'unavailable', data: [], message: error instanceof Error ? error.message : 'Request failed' };
+    return { ...base, state: 'unavailable', data: [], message: safeMessage(error) };
   }
 }

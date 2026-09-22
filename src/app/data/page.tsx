@@ -1,147 +1,23 @@
-import Link from 'next/link';
-import Logo from '@/components/Logo';
-
-const providers = [
-  {
-    name: 'OpenStreetMap',
-    use: 'Interactive map tiles',
-    sent: 'Map area, zoom level and your IP address are sent by your browser when tiles load.',
-    terms: 'https://operations.osmfoundation.org/policies/tiles/',
-    privacy: 'https://osmfoundation.org/wiki/Privacy_Policy',
-  },
-  {
-    name: 'Geoapify',
-    use: 'Search, reverse geocoding and venue timezone',
-    sent: 'Search text or selected coordinates. Requests go through this app, so your API key is not exposed in the browser.',
-    terms: 'https://www.geoapify.com/terms-and-conditions/',
-    privacy: 'https://www.geoapify.com/privacy-policy/',
-  },
-  {
-    name: 'Ticketmaster',
-    use: 'Nearby public events',
-    sent: 'Approximate venue area and event time window.',
-    terms: 'https://developer.ticketmaster.com/support/terms-of-use/',
-    privacy: 'https://privacy.ticketmaster.com/privacy-policy',
-  },
-  {
-    name: 'football-data.org',
-    use: 'Selected football-team fixtures',
-    sent: 'Fixture date window. The team name is used by this app to filter returned fixtures.',
-    terms: 'https://www.football-data.org/client/register',
-    privacy: 'https://www.football-data.org/about',
-  },
-  {
-    name: 'TVmaze',
-    use: 'Programme search and airing schedules',
-    sent: 'Programme search text or programme ID and date.',
-    terms: 'https://www.tvmaze.com/api#licensing',
-    privacy: 'https://www.tvmaze.com/site/privacy',
-  },
-  {
-    name: 'GOV.UK',
-    use: 'UK bank holidays',
-    sent: 'No venue-specific request. The public holiday feed is fetched and matched locally on the serverless function.',
-    terms: 'https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/',
-    privacy: 'https://www.gov.uk/help/privacy-notice',
-  },
-  {
-    name: 'MET Norway',
-    use: 'Weather forecast',
-    sent: 'Venue coordinates rounded to four decimal places.',
-    terms: 'https://api.met.no/doc/TermsOfService',
-    privacy: 'https://www.met.no/en/About-us/privacy',
-  },
-  {
-    name: 'Sunrise-Sunset',
-    use: 'Sunrise and sunset',
-    sent: 'Venue coordinates, date and timezone.',
-    terms: 'https://sunrise-sunset.org/terms',
-    privacy: 'https://sunrise-sunset.org/privacy',
-  },
-  {
-    name: 'Transport for London',
-    use: 'London transport disruptions',
-    sent: 'Venue coordinates and event date for London events only.',
-    terms: 'https://tfl.gov.uk/corporate/terms-and-conditions/transport-data-service',
-    privacy: 'https://tfl.gov.uk/corporate/privacy-and-cookies/',
-  },
-];
-
-export default function DataPage() {
-  return (
-    <div className="info-page">
-      <header className="site-header info-header">
-        <Link className="brand" href="/"><Logo size={30} /><strong>BAD TIMING</strong></Link>
-        <Link className="plain-link" href="/">Back</Link>
-      </header>
-
-      <main className="info-shell">
-        <section className="info-intro">
-          <h1>Data & privacy</h1>
-          <p>BAD TIMING has no accounts, database, analytics or advertising in this codebase. Your event is checked only when you ask.</p>
-        </section>
-
-        <section className="info-section">
-          <h2>How it works</h2>
-          <div className="info-grid two">
-            <article><h3>Your event</h3><p>The place, time, duration and optional interests are sent to this app&apos;s serverless API. They are not stored in a database.</p></article>
-            <article><h3>Temporary cache</h3><p>Some public API responses are kept in server memory for a short time to reduce repeat calls. The cache disappears when that server instance is recycled.</p></article>
-            <article><h3>The map</h3><p>OpenStreetMap tiles load directly in your browser. OpenStreetMap therefore receives ordinary web-request data such as your IP address.</p></article>
-            <article><h3>Your host</h3><p>This repository does not choose a hosting provider. The provider you deploy on may keep request or security logs under its own policy.</p></article>
-          </div>
-        </section>
-
-        <section className="info-section">
-          <h2>Why there is a small serverless layer</h2>
-          <p className="info-copy">Several provider credentials must not be published in browser code, and MET Norway expects production clients to identify themselves properly. The serverless routes keep those credentials private and proxy the checks. There is no application server or database to operate.</p>
-        </section>
-
-        <section className="info-section">
-          <h2>Processors and third parties</h2>
-          <p className="info-copy">Your hosting provider is the main infrastructure processor for this app once you deploy it. The services below provide external data; they are not automatically all “subprocessors” in the GDPR sense. For example, OpenStreetMap Foundation states that use of its public services does not create a controller–processor relationship. Update this page after you choose a host and before publishing your own privacy notice.</p>
-        </section>
-
-        <section className="info-section">
-          <h2>Attribution</h2>
-          <div className="attribution-list">
-            <span>Map © OpenStreetMap contributors</span>
-            <span>Location data: Geoapify / OpenStreetMap</span>
-            <span>Football data provided by the Football-Data.org API</span>
-            <span>Weather data: MET Norway, CC BY 4.0</span>
-            <span>Daylight: <a href="https://sunrise-sunset.org/" target="_blank" rel="noreferrer">Sunrise-Sunset.org</a></span>
-            <span>TV data: <a href="https://www.tvmaze.com/" target="_blank" rel="noreferrer">TVmaze</a>, CC BY-SA</span>
-            <span>Powered by TfL Open Data</span>
-            <span>Contains OS data © Crown copyright and database rights 2016</span>
-            <span>Geomni UK Map data © and database rights 2019</span>
-            <span>Contains public sector information licensed under the Open Government Licence v3.0</span>
-          </div>
-        </section>
-
-        <section className="info-section">
-          <h2>Data providers</h2>
-          <div className="provider-list">
-            {providers.map((provider) => (
-              <article className="provider-card" key={provider.name}>
-                <div><h3>{provider.name}</h3><p>{provider.use}</p></div>
-                <p>{provider.sent}</p>
-                <div className="provider-links"><a href={provider.terms} target="_blank" rel="noreferrer">Terms ↗</a><a href={provider.privacy} target="_blank" rel="noreferrer">Privacy ↗</a></div>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="info-section">
-          <h2>Before a public launch</h2>
-          <div className="info-grid two">
-            <article><h3>Hosting</h3><p>Add your actual hosting provider to this page and to your privacy notice if it processes visitor data for you.</p></article>
-            <article><h3>Commercial use</h3><p>Review each provider&apos;s current terms first. Ticketmaster in particular restricts some revenue-generating uses of its API.</p></article>
-            <article><h3>Map traffic</h3><p>OpenStreetMap&apos;s public tile service is suitable for normal interactive use, but it is not a commercial SLA. Change tile provider if traffic becomes significant.</p></article>
-            <article><h3>Terms change</h3><p>Provider terms and limits can change. The links above are the source of truth.</p></article>
-          </div>
-        </section>
-
-        <footer className="info-footer">Last reviewed 22 September 2026.</footer>
-      </main>
-    </div>
-  );
+import InfoLayout from '@/components/InfoLayout';
+import {deploymentDetails,externalUrl,legalReady} from '@/lib/deployment';
+export const dynamic='force-dynamic';
+export const metadata={title:'Privacy · Bad Timing'};
+export default function DataPage(){const d=deploymentDetails();const hostUrl=externalUrl(d.hostPrivacy),authority=externalUrl(d.authority);
+ return <InfoLayout title="Privacy" intro="How your event details are handled.">
+  {!legalReady()&&<p className="deployment-notice" role="note">This deployment’s privacy notice is incomplete: the operator has not yet supplied all contact, hosting, retention and legal-basis details. Check with the operator before sharing sensitive locations.</p>}
+  <section className="info-section"><h2>Who operates this app</h2><p className="info-copy">{d.operator||'The operator has not published its identity.'}{d.address&&` · ${d.address}`}</p>{d.contact&&<p className="info-copy"><a href={`mailto:${d.contact}`}>{d.contact}</a></p>}</section>
+  <section className="info-section"><h2>When you run a check</h2><div className="info-grid two">
+   <article><h3>Event details</h3><p>The selected place, coordinates, timezone, date, duration, event type and optional interests are sent to the app’s server-side API. Avoid entering a private home or sensitive meeting location unless you are comfortable with this processing.</p></article>
+   <article><h3>External checks</h3><p>The server requests public data using only the fields each source needs: for example, coordinates for a forecast, a bounding box for roads, a country for holidays or a programme ID for television. The Sources page describes each transfer.</p></article>
+   <article><h3>Location permission</h3><p>Your device location is requested only when you press “Use my location” and grant browser permission. The resulting pin is sent for location matching and included when you run a check. You can instead search or place a pin manually.</p></article>
+   <article><h3>Optional news</h3><p>News searches run only when you enable them. They use the venue’s city/country and general disruption terms, not your name or an inferred political preference. Headline mentions are not treated as verified incident locations.</p></article>
+  </div></section>
+  <section className="info-section"><h2>Map requests</h2><p className="info-copy">OpenStreetMap tiles load directly from OpenStreetMap’s servers when you use the map. These requests reveal ordinary connection data such as your IP address and the viewed map area. See the <a href="https://osmfoundation.org/wiki/Privacy_Policy">OpenStreetMap Foundation privacy policy</a>. Other data-source requests go through this app’s server; this does not make coordinates anonymous.</p></section>
+  <section className="info-section"><h2>Storage and logs</h2><p className="info-copy">This code has no accounts, private-calendar access, event-history database, advertising or analytics. The event and report remain in the current browser page; refreshing clears them. The application does not write an event history to local storage.</p><p className="info-copy">Public API responses and search results are temporarily cached in server memory. Reuse expires according to the source or application cache policy; expired entries are removed during eviction or when the server instance is recycled. A salted hash of the request IP is held briefly for rate limiting. API routes do not log event bodies or key values.</p><p className="info-copy">The hosting platform and external publishers may maintain their own access/security logs. App-level non-storage is not a claim that those organisations keep no records.</p><div className="info-grid two"><article><h3>Hosting</h3><p>{d.host||'Not published by the operator.'}{d.region&&` · ${d.region}`}</p>{hostUrl&&<a href={hostUrl}>Hosting privacy notice ↗</a>}</article><article><h3>Hosting log retention</h3><p>{d.logs||'Not published by the operator.'}</p></article></div></section>
+  <section className="info-section"><h2>Purposes and legal basis</h2><p className="info-copy">Details are processed to answer the checks you request, compare alternatives, protect API capacity and display public source information. Optional interests are used only for that check, not for an advertising profile.</p><p className="info-copy">{d.basis||'The operator has not yet supplied the applicable legal basis for this deployment.'}</p></section>
+  <section className="info-section"><h2>Providers and transfers</h2><p className="info-copy">The host processes requests for this app. Public-data services are separate recipients and are not automatically all subprocessors: their role depends on the service and actual contractual arrangements. Their own notices govern their processing. The operator must maintain its real processor agreements and any required transfer safeguards.</p><p className="info-copy">{d.transfers||'The operator has not yet described international processing locations or transfer safeguards for this deployment.'}</p></section>
+  <section className="info-section"><h2>Your choices and rights</h2><p className="info-copy">You can avoid device geolocation, leave optional interests blank, disable news searches, choose a non-sensitive public location, or close the page. Permissions already granted can be revoked in your browser settings.</p><p className="info-copy">Depending on the applicable law and processing basis, you may have rights to access, correct, delete or receive your personal data, restrict or object to processing, and withdraw consent where processing relies on it. Contact the operator above. Some requests will depend on what the operator or host actually retains. You may complain to the competent data protection authority{authority?<>: <a href={authority}>authority information ↗</a></>:'.'}.</p></section>
+  <section className="info-section"><h2>Recommendations and third-party links</h2><p className="info-copy">Recommendations are rules-based comparisons, not decisions imposed on you. BAD TIMING does not assess a person’s eligibility or attendance. Opening a source article or publisher link takes you to a separate service with its own privacy policy.</p></section>
+  <p className="info-footer">Notice version: {d.effective}. Changes to the deployment’s data handling require an updated notice.</p>
+ </InfoLayout>;
 }

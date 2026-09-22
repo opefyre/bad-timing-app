@@ -1,44 +1,41 @@
 const LOCAL_RE = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/;
 
-function localParts(localDateTime: string) {
+export function localParts(localDateTime: string) {
   const match = LOCAL_RE.exec(localDateTime);
-  if (!match) throw new Error('Invalid local date/time');
-  return {
-    year: Number(match[1]),
-    month: Number(match[2]),
-    day: Number(match[3]),
-    hour: Number(match[4]),
-    minute: Number(match[5]),
-    second: Number(match[6] ?? 0),
-  };
+  if (!match) throw new Error('Choose a valid date and time.');
+  const p = { year: +match[1], month: +match[2], day: +match[3], hour: +match[4], minute: +match[5], second: +(match[6] ?? 0) };
+  const d = new Date(Date.UTC(p.year,p.month-1,p.day,p.hour,p.minute,p.second));
+  if(p.year<2000 || p.year>2100 || d.getUTCFullYear()!==p.year || d.getUTCMonth()+1!==p.month || d.getUTCDate()!==p.day || p.hour>23 || p.minute>59 || p.second>59) throw new Error('Choose a valid date and time.');
+  return p;
 }
-
-function timezoneOffsetMs(date: Date, timeZone: string): number {
-  const formatter = new Intl.DateTimeFormat('en-CA', {
-    timeZone,
-    year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', second: '2-digit',
-    hourCycle: 'h23',
-  });
-  const parts = Object.fromEntries(
-    formatter.formatToParts(date).filter((part) => part.type !== 'literal').map((part) => [part.type, part.value]),
-  );
-  const asUtc = Date.UTC(
-    Number(parts.year), Number(parts.month) - 1, Number(parts.day),
-    Number(parts.hour), Number(parts.minute), Number(parts.second),
-  );
-  return asUtc - date.getTime();
+const formatters = new Map<string, Intl.DateTimeFormat>();
+function formatter(timeZone:string) {
+  let f = formatters.get(timeZone);
+  if(!f) { f=new Intl.DateTimeFormat('en-CA',{timeZone,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}); if(formatters.size>100)formatters.clear(); formatters.set(timeZone,f); }
+  return f;
 }
-
-export function zonedLocalToUtc(localDateTime: string, timeZone: string): Date {
-  const p = localParts(localDateTime);
-  const wallClockUtc = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);
-  let guess = new Date(wallClockUtc);
-  for (let i = 0; i < 3; i += 1) {
-    const offset = timezoneOffsetMs(guess, timeZone);
-    guess = new Date(wallClockUtc - offset);
+export function instantToLocal(instant: Date | string, timeZone: string):string {
+  const v=Object.fromEntries(formatter(timeZone).formatToParts(new Date(instant)).filter(p=>p.type!=='literal').map(p=>[p.type,p.value]));
+  return `${v.year}-${v.month}-${v.day}T${v.hour}:${v.minute}:${v.second}`;
+}
+export function possibleInstants(localDateTime:string,timeZone:string):Date[] {
+  const p=localParts(localDateTime), wall=Date.UTC(p.year,p.month-1,p.day,p.hour,p.minute,p.second);
+  const target=`${localDateTime.slice(0,16)}:${String(p.second).padStart(2,'0')}`;
+  const candidates=new Set<number>();
+  for(const hours of [-36,-12,0,12,36]) {
+    const probe=wall+hours*3600000;
+    const local=instantToLocal(new Date(probe),timeZone);
+    const offset=new Date(local+'Z').getTime()-probe;
+    const result=wall-offset;
+    if(instantToLocal(new Date(result),timeZone)===target)candidates.add(result);
   }
-  return guess;
+  return [...candidates].sort((a,b)=>a-b).map(n=>new Date(n));
+}
+export function zonedLocalToUtc(localDateTime:string,timeZone:string):Date {
+  const dates=possibleInstants(localDateTime,timeZone);
+  if(!dates.length)throw new Error('That local time does not exist because the clocks change. Choose another time.');
+  // A repeated wall time uses its first occurrence. The report discloses this choice.
+  return dates[0];
 }
 
 export function addLocalMinutes(localDateTime: string, minutes: number): string {

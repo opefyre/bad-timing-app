@@ -1,12 +1,15 @@
+import { guard } from '@/lib/api-guard';
+import { getJson } from '@/lib/http';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
+  const denied=guard(request);if(denied)return denied;
   const q = request.nextUrl.searchParams.get('q')?.trim();
-  if (!q || q.length < 2) return NextResponse.json({ shows: [] });
+  if (!q || q.length < 2 || q.length > 150) return NextResponse.json({ shows: [] });
   try {
-    const response = await fetch(`https://api.tvmaze.com/search/shows?q=${encodeURIComponent(q)}`, { next: { revalidate: 3600 } });
-    if (!response.ok) return NextResponse.json({ error: 'TV search failed' }, { status: response.status });
-    const hits = await response.json() as Array<{ show: { id: number; name: string; premiered?: string; network?: { country?: { name?: string } }; webChannel?: { name?: string } } }>;
+    const response=await getJson(`https://api.tvmaze.com/search/shows?q=${encodeURIComponent(q)}`,3600000);
+    const hits=response.data as Array<{show:{id:number;name:string;premiered?:string;network?:{country?:{name?:string}};webChannel?:{name?:string}}}>;
+    if(!Array.isArray(hits))throw new Error('Unexpected programme response');
     return NextResponse.json({ shows: hits.slice(0, 6).map(({ show }) => ({
       id: show.id,
       name: show.name,

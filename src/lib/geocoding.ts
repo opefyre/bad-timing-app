@@ -8,6 +8,8 @@ type GeoFeature = {
     name?: string;
     country_code?: string;
     state?: string;
+    state_code?: string;
+    country?: string;
     city?: string;
     place_id?: string;
     timezone?: { name?: string };
@@ -15,11 +17,11 @@ type GeoFeature = {
 };
 type GeoResponse = { features?: GeoFeature[] };
 
-export async function geocodeVenue(address: string): Promise<VenueInput> {
+export async function geocodeVenue(address: string, coordinates?: {lat:number;lng:number}): Promise<VenueInput> {
   const apiKey = process.env.GEOAPIFY_API_KEY;
   if (!apiKey) throw new Error('Geoapify API key not configured');
-  const url = new URL('https://api.geoapify.com/v1/geocode/search');
-  url.searchParams.set('text', address);
+  const url = new URL(`https://api.geoapify.com/v1/geocode/${coordinates?'reverse':'search'}`);
+  if(coordinates){url.searchParams.set('lat',String(coordinates.lat));url.searchParams.set('lon',String(coordinates.lng));}else url.searchParams.set('text', address);
   url.searchParams.set('limit', '1');
   url.searchParams.set('apiKey', apiKey);
   const data = await fetchJson<GeoResponse>(url.toString());
@@ -35,5 +37,7 @@ export async function geocodeVenue(address: string): Promise<VenueInput> {
     countryCode: feature.properties.country_code,
     state: feature.properties.state,
     city: feature.properties.city,
+    subdivisionCode:feature.properties.state_code,
+    countryName:feature.properties.country,
   };
 }

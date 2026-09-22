@@ -1,0 +1,28 @@
+{
+  "environment": "Isolated React component harness. Next Link substituted with an anchor. Mocked API responses and map tiles. Not a Next production build or live provider verification.",
+  "passed": [
+    "home: desktop layout fits viewport",
+    "home: mobile layout fits viewport",
+    "report: desktop layout fits viewport",
+    "report: mobile layout fits viewport",
+    "sources: desktop layout fits viewport",
+    "sources: mobile layout fits viewport",
+    "data: desktop layout fits viewport",
+    "data: mobile layout fits viewport",
+    "terms: desktop layout fits viewport",
+    "terms: mobile layout fits viewport",
+    "Location search selects venue and creates map marker",
+    "Leaflet zoom controls respond",
+    "Draggable map marker triggers location update",
+    "Custom start picker changes wall-clock time",
+    "Custom duration picker selects 120 minutes",
+    "Indoor/outdoor and adjacent input both 52px high",
+    "Extended form sends duration, radius, news and internet choices",
+    "Finding preferences update the report verdict",
+    "Alternative request sends event plus user preferences and mode",
+    "Coverage distinguishes unconfigured feeds",
+    "Interactive report has no mobile horizontal overflow",
+    "Mobile custom picker stays within viewport"
+  ],
+  "consoleErrors": []
+}
