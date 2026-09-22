@@ -31,10 +31,10 @@ Primary documentation reviewed for this implementation: 22 September 2026. These
 
 - Mode: **key** · `API_FOOTBALL_KEY`.
 - [Documentation](https://www.api-football.com/documentation-v3) · [Publisher](https://www.api-football.com/).
-- Coverage: Selected teams worldwide across most national leagues and cups, by team ID. Free plan allowance is about 100 requests a day, so team searches are cached for 30 days, fixture windows for 3 hours and selections pace themselves at ~1 request/second.
+- Coverage: Selected teams worldwide across most national leagues and cups, by team ID. The free plan only serves the 2022-2024 seasons and about 100 requests a day, so current-season fixture checks report unavailable until the plan is upgraded; team searches are cached for 30 days and fixture windows for 3 hours.
 - Sent: Team name for search; team ID with a fixture date range.
 - Reuse: Provider terms; keep credentials confidential.
-- Implementation: `/teams?search=` for the merged picker; `/fixtures?team=&from=&to=` per selected team. Cancelled/postponed/suspended fixtures are dropped; a two-hour match window is estimated. Teams are matched by provider-native ID (never guessed across providers).
+- Implementation: `/teams?search=` for the merged picker; `/fixtures?team=&season=&from=&to=` per selected team, season inferred from the event window, pacing ~1 request/second. Cancelled/postponed/suspended fixtures are dropped; a two-hour match window is estimated. Teams are matched by provider-native ID (never guessed across providers).
 
 ## TVmaze
 

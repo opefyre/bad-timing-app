@@ -1,6 +1,6 @@
 import { CheckResult, EventInput } from '@/types';
 import { cached } from './cache';
-import { fetchJson, safeMessage } from './http';
+import { fetchJson, HttpError, safeMessage } from './http';
 import { eventWindow, formatInstant, overlaps } from './time';
 import { defaultPreference } from './preferences';
 import { TeamSuggestion } from './teams';
@@ -15,6 +15,7 @@ type AfFixture = {
   teams?: { home?: AfTeam; away?: AfTeam };
   league?: { name?: string };
 };
+type AfResponse = { response?: AfFixture[]; errors?: Record<string, string> };
 
 /** Live team search against the user's API-Football key; cached per query for 30 days. */
 export async function searchApiFootballTeams(query: string): Promise<TeamSuggestion[]> {
@@ -61,14 +62,18 @@ export async function checkFootballAf(input: EventInput): Promise<CheckResult> {
     const { start, end } = eventWindow(input.dateTime, input.durationMinutes, timezone);
     const from = new Date(start.getTime() - 6 * 60 * 60_000).toISOString().slice(0, 10);
     const to = new Date(end.getTime() + 86400000).toISOString().slice(0, 10);
+    const season = start.getUTCMonth() >= 6 ? start.getUTCFullYear() : start.getUTCFullYear() - 1;
     const data: CheckResult['data'] = [];
+    const reasons: string[] = [];
     let failures = 0;
     for (const [index, team] of teams.entries()) {
       if (index > 0) await sleep(1100);
       try {
-        const response = await cached(`af:fixtures:${team.id}:${from}:${to}`, 3 * 3600_000, async () =>
-          fetchJson<{ response?: AfFixture[] }>(`${BASE}/fixtures?team=${team.id}&from=${from}&to=${to}`, { headers: { 'x-apisports-key': apiKey } }),
+        const response: AfResponse = await cached(`af:fixtures:${team.id}:${season}:${from}:${to}`, 3 * 3600_000, async () =>
+          fetchJson<AfResponse>(`${BASE}/fixtures?team=${team.id}&season=${season}&from=${from}&to=${to}`, { headers: { 'x-apisports-key': apiKey } }),
         );
+        const errors = Object.values(response.errors ?? {});
+        if (errors.length) throw new Error(errors.join(' '));
         for (const match of response.response ?? []) {
           if (cancelled.has(match.fixture?.status?.short ?? '') || typeof match.fixture?.id !== 'number') continue;
           const matchStart = new Date(match.fixture.date ?? '');
@@ -96,16 +101,19 @@ export async function checkFootballAf(input: EventInput): Promise<CheckResult> {
             caveat: 'A two-hour match window is estimated from kickoff. Extra time, delays and schedule changes can extend it.',
           });
         }
-      } catch {
+      } catch (error) {
         failures += 1;
+        reasons.push(error instanceof HttpError ? safeMessage(error) : error instanceof Error ? error.message : safeMessage(error));
       }
     }
-    if (failures === teams.length) throw new Error('Every team fixture check failed');
+    if (failures === teams.length) {
+      return { ...base, state: 'unavailable', data: [], message: [...new Set(reasons)].join(' · ') || 'Every team fixture check failed' };
+    }
     return {
       ...base,
       state: failures ? 'partial' : 'checked',
       data,
-      message: failures ? 'Some team fixture checks could not be confirmed.' : 'Published worldwide fixtures for the selected teams; the free plan allows 100 requests a day.',
+      message: failures ? `Some team fixture checks could not be confirmed. ${[...new Set(reasons)].join(' · ')}` : 'Published worldwide fixtures for the selected teams; the free plan allows 100 requests a day.',
     };
   } catch (error) {
     return { ...base, state: 'unavailable', data: [], message: safeMessage(error) };
