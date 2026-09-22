@@ -1,65 +1,58 @@
-import { CheckResult } from '@/types';
+import { CheckResult, EventInput } from '@/types';
+import { cached } from './cache';
+import { fetchJson } from './http';
+import { eventWindow, formatInstant, localDate } from './time';
+import { defaultPreference } from './preferences';
 
-export async function checkDaylight(lat: number, lng: number, dateTime: string, durationMinutes: number): Promise<CheckResult> {
+type SunResponse = {
+  date?: string;
+  tzid?: string;
+  sunrise?: string | null;
+  sunset?: string | null;
+  error?: string;
+  message?: string;
+};
+
+export async function checkDaylight(input: EventInput): Promise<CheckResult> {
+  const checkedAt = new Date().toISOString();
+  const base = { source: 'Sunrise-Sunset API', sourceId: 'daylight', url: 'https://sunrise-sunset.org/api', lastChecked: checkedAt };
+  if (!input.isOutdoor) return { ...base, state: 'not_applicable', data: [], message: 'Indoor event' };
+  const { lat, lng, timezone } = input.venue;
+  if (typeof lat !== 'number' || typeof lng !== 'number' || !timezone) return { ...base, state: 'not_applicable', data: [], message: 'Location or timezone unavailable' };
+
   try {
-    const date = new Date(dateTime).toISOString().split('T')[0];
-    const url = `https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lng}&date=${date}&formatted=0`;
-    const response = await fetch(url);
-    const data = await response.json();
-
-    if (data.status !== 'OK') {
-      return { success: true, data: [], source: 'Sunrise-Sunset API', lastChecked: new Date().toISOString() };
-    }
-
-    const sunset = new Date(data.results.sunset);
-    const sunrise = new Date(data.results.sunrise);
-    const eventStart = new Date(dateTime);
-    const eventEnd = new Date(eventStart.getTime() + durationMinutes * 60 * 1000);
-
+    const date = localDate(input.dateTime);
+    const data = await cached(`sun:${lat.toFixed(3)}:${lng.toFixed(3)}:${date}`, 12 * 60 * 60_000, () => fetchJson<SunResponse>(`https://api.sunrise-sunset.org/v2?lat=${lat}&lng=${lng}&date=${date}&tz=${encodeURIComponent(timezone)}`));
+    if (!data.sunrise || !data.sunset) return { ...base, state: 'out_of_range', data: [], message: data.message || 'Sunrise or sunset unavailable for this date/location' };
+    const sunrise = new Date(data.sunrise);
+    const sunset = new Date(data.sunset);
+    const { start, end } = eventWindow(input.dateTime, input.durationMinutes, timezone);
     const conflicts = [];
-
-    if (eventStart >= sunset) {
+    if (start >= sunset) {
       conflicts.push({
-        id: `daylight-after-sunset-${date}`,
-        type: 'daylight' as const,
-        title: 'Starts after sunset',
-        description: `Sunset at ${sunset.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} is before your event begins`,
-        impact: 'high' as const,
-        source: 'Sunrise-Sunset API',
-        sourceUrl: 'https://sunrise-sunset.org',
-        preference: 'avoid' as const,
-        dateTime: data.results.sunset,
+        id: `daylight-after-${date}`, type: 'daylight' as const, title: 'Starts after sunset',
+        description: `Sunset is ${formatInstant(sunset.toISOString(), timezone, { hour: '2-digit', minute: '2-digit' })}`,
+        impact: 'high' as const, source: base.source, sourceUrl: base.url,
+        preference: defaultPreference('daylight', input), startsAt: sunset.toISOString(),
       });
-    } else if (eventEnd > sunset) {
+    } else if (end > sunset) {
       conflicts.push({
-        id: `daylight-sunset-${date}`,
-        type: 'daylight' as const,
-        title: 'Sunset during activity',
-        description: `Sunset at ${sunset.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} falls during your event`,
-        impact: 'high' as const,
-        source: 'Sunrise-Sunset API',
-        sourceUrl: 'https://sunrise-sunset.org',
-        preference: 'avoid' as const,
-        dateTime: data.results.sunset,
+        id: `daylight-during-${date}`, type: 'daylight' as const, title: 'Sunset lands inside your event',
+        description: `Sunset is ${formatInstant(sunset.toISOString(), timezone, { hour: '2-digit', minute: '2-digit' })}`,
+        impact: 'high' as const, source: base.source, sourceUrl: base.url,
+        preference: defaultPreference('daylight', input), startsAt: sunset.toISOString(),
       });
     }
-
-    if (eventStart < sunrise) {
+    if (start < sunrise) {
       conflicts.push({
-        id: `daylight-sunrise-${date}`,
-        type: 'daylight' as const,
-        title: 'Before sunrise',
-        description: `Sunrise at ${sunrise.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} is after your event starts`,
-        impact: 'medium' as const,
-        source: 'Sunrise-Sunset API',
-        sourceUrl: 'https://sunrise-sunset.org',
-        preference: 'avoid' as const,
-        dateTime: data.results.sunrise,
+        id: `daylight-before-${date}`, type: 'daylight' as const, title: 'Starts before sunrise',
+        description: `Sunrise is ${formatInstant(sunrise.toISOString(), timezone, { hour: '2-digit', minute: '2-digit' })}`,
+        impact: 'medium' as const, source: base.source, sourceUrl: base.url,
+        preference: defaultPreference('daylight', input), startsAt: sunrise.toISOString(),
       });
     }
-
-    return { success: true, data: conflicts, source: 'Sunrise-Sunset API', lastChecked: new Date().toISOString() };
+    return { ...base, state: 'checked', data: conflicts };
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error', source: 'Sunrise-Sunset API', lastChecked: new Date().toISOString() };
+    return { ...base, state: 'unavailable', data: [], message: error instanceof Error ? error.message : 'Request failed' };
   }
 }

@@ -4,9 +4,10 @@ import { EventInput } from '@/types';
 
 export async function POST(request: NextRequest) {
   try {
-    const input: EventInput = await request.json();
-    if (!input.venue?.address) return NextResponse.json({ error: 'Venue address is required' }, { status: 400 });
+    const input = await request.json() as EventInput;
+    if (!input.venue?.address) return NextResponse.json({ error: 'Venue is required' }, { status: 400 });
     if (!input.dateTime) return NextResponse.json({ error: 'Date and time are required' }, { status: 400 });
+    if (!input.durationMinutes || input.durationMinutes < 15 || input.durationMinutes > 24 * 60) return NextResponse.json({ error: 'Duration must be between 15 minutes and 24 hours' }, { status: 400 });
     const report = await analyzeEvent(input);
     return NextResponse.json(report);
   } catch (error) {

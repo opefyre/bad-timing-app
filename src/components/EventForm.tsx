@@ -1,340 +1,274 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import dynamic from 'next/dynamic';
-import { EventInput } from '@/types';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { EventInput, EventKind, VenueInput } from '@/types';
 
-const LocationMap = dynamic(() => import('@/components/LocationMap'), {
-  ssr: false,
-  loading: () => (
-    <div className="w-full flex items-center justify-center" style={{ height: '240px', background: 'var(--paper-dark)', borderRadius: '2px', border: '2px dashed var(--ink-faint)' }}>
-      <span className="text-sm" style={{ color: 'var(--ink-faint)' }}>laying the map out…</span>
-    </div>
-  ),
-});
+type LocationSuggestion = VenueInput & { id: string; label: string; lat: number; lng: number };
+type TvSuggestion = { id: number; name: string; detail?: string };
 
-interface Suggestion {
-  id: string;
-  label: string;
-  name?: string;
-  lat: number;
-  lng: number;
+const EVENT_KINDS: Array<{ value: EventKind; label: string; hint: string }> = [
+  { value: 'birthday', label: 'BIRTHDAY', hint: 'friends + plans' },
+  { value: 'dinner', label: 'DINNER', hint: 'table + travel' },
+  { value: 'meetup', label: 'MEETUP', hint: 'community' },
+  { value: 'workshop', label: 'WORKSHOP', hint: 'focused time' },
+  { value: 'outdoor_activity', label: 'OUTDOOR', hint: 'weather + light' },
+  { value: 'screening', label: 'SCREENING', hint: 'match / TV' },
+  { value: 'other', label: 'OTHER', hint: 'something else' },
+];
+
+function defaultLocalDateTime() {
+  const now = new Date(Date.now() + 24 * 60 * 60_000);
+  now.setMinutes(Math.ceil(now.getMinutes() / 30) * 30, 0, 0);
+  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 16);
 }
 
-interface Selected {
-  label: string;
-  lat: number;
-  lng: number;
-}
-
-interface EventFormProps {
+interface Props {
   onSubmit: (input: EventInput) => void;
   isLoading: boolean;
+  initialData?: EventInput | null;
 }
 
-export default function EventForm({ onSubmit, isLoading }: EventFormProps) {
-  const [query, setQuery] = useState('');
-  const [selected, setSelected] = useState<Selected | null>(null);
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
-  const [open, setOpen] = useState(false);
-  const [highlight, setHighlight] = useState(-1);
-  const [searching, setSearching] = useState(false);
-  const [searchError, setSearchError] = useState(false);
-  const [resolving, setResolving] = useState(false);
-  const [venueName, setVenueName] = useState('');
-  const [dateTime, setDateTime] = useState('');
-  const [duration, setDuration] = useState(90);
-  const [isOutdoor, setIsOutdoor] = useState(true);
-  const [footballTeam, setFootballTeam] = useState('');
-  const [programmeName, setProgrammeName] = useState('');
-  const [showOptional, setShowOptional] = useState(false);
+export default function EventForm({ onSubmit, isLoading, initialData }: Props) {
+  const [locationQuery, setLocationQuery] = useState(initialData?.venue.address ?? '');
+  const [venue, setVenue] = useState<VenueInput | null>(initialData?.venue ?? null);
+  const [locations, setLocations] = useState<LocationSuggestion[]>([]);
+  const [locationBusy, setLocationBusy] = useState(false);
+  const [locationOpen, setLocationOpen] = useState(false);
+  const locationBox = useRef<HTMLDivElement>(null);
 
-  const boxRef = useRef<HTMLDivElement>(null);
-  const reverseToken = useRef(0);
+  const [eventKind, setEventKind] = useState<EventKind>(initialData?.eventKind ?? 'meetup');
+  const [dateTime, setDateTime] = useState(initialData?.dateTime ?? defaultLocalDateTime());
+  const [duration, setDuration] = useState(initialData?.durationMinutes ?? 90);
+  const [isOutdoor, setIsOutdoor] = useState(initialData?.isOutdoor ?? false);
+  const [venueName, setVenueName] = useState(initialData?.venue.name ?? '');
+  const [footballTeam, setFootballTeam] = useState(initialData?.footballTeam ?? '');
+
+  const [programmeName, setProgrammeName] = useState(initialData?.programmeName ?? '');
+  const [programmeId, setProgrammeId] = useState<number | undefined>(initialData?.programmeId);
+  const [tvResults, setTvResults] = useState<TvSuggestion[]>([]);
+  const [tvOpen, setTvOpen] = useState(false);
+  const [tvBusy, setTvBusy] = useState(false);
+  const tvBox = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false);
+    const handler = (event: PointerEvent) => {
+      if (locationBox.current && !locationBox.current.contains(event.target as Node)) setLocationOpen(false);
+      if (tvBox.current && !tvBox.current.contains(event.target as Node)) setTvOpen(false);
     };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    document.addEventListener('pointerdown', handler);
+    return () => document.removeEventListener('pointerdown', handler);
   }, []);
 
   useEffect(() => {
-    const q = query.trim();
-    if (q.length < 3 || (selected && selected.label === q)) {
-      setSearching(false);
-      return;
-    }
-    setSearching(true);
-    const timer = setTimeout(async () => {
+    const query = locationQuery.trim();
+    if (query.length < 3 || (venue?.address === query && typeof venue.lat === 'number')) return;
+    const timer = window.setTimeout(async () => {
+      setLocationBusy(true);
       try {
-        const res = await fetch(`/api/geocode?q=${encodeURIComponent(q)}`);
-        const data = await res.json();
-        if (!res.ok) throw new Error('search failed');
-        setSuggestions(data.suggestions ?? []);
-        setOpen(true);
-        setHighlight(-1);
-        setSearchError(false);
+        const response = await fetch(`/api/geocode?q=${encodeURIComponent(query)}`);
+        const data = await response.json();
+        if (!response.ok) throw new Error('Location search failed');
+        setLocations(data.suggestions ?? []);
+        setLocationOpen(true);
       } catch {
-        setSuggestions([]);
-        setSearchError(true);
+        setLocations([]);
+      } finally {
+        setLocationBusy(false);
       }
-      setSearching(false);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [query, selected]);
+    }, 280);
+    return () => window.clearTimeout(timer);
+  }, [locationQuery, venue]);
 
-  const select = (s: Suggestion) => {
-    setSelected({ label: s.label, lat: s.lat, lng: s.lng });
-    setQuery(s.label);
-    setSuggestions([]);
-    setOpen(false);
-    setHighlight(-1);
-    if (s.name && !venueName) setVenueName(s.name);
-  };
-
-  const handlePlace = async (lat: number, lng: number) => {
-    const token = ++reverseToken.current;
-    setResolving(true);
-    const fallback = `Pin at ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-    const set = (label: string, name?: string) => {
-      if (token !== reverseToken.current) return;
-      setSelected({ label, lat, lng });
-      setQuery(label);
-      if (name && !venueName) setVenueName(name);
-    };
-    try {
-      const res = await fetch(`/api/reverse-geocode?lat=${lat}&lng=${lng}`);
-      const data = await res.json();
-      if (res.ok && data.formatted) set(data.formatted, data.name);
-      else set(fallback);
-    } catch {
-      set(fallback);
-    } finally {
-      if (token === reverseToken.current) setResolving(false);
-    }
-  };
-
-  const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setHighlight((h) => Math.min(h + 1, suggestions.length - 1));
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setHighlight((h) => Math.max(h - 1, 0));
-    } else if (e.key === 'Enter') {
-      if (open && highlight >= 0 && suggestions[highlight]) {
-        e.preventDefault();
-        select(suggestions[highlight]);
+  useEffect(() => {
+    const query = programmeName.trim();
+    if (query.length < 2 || programmeId) return;
+    const timer = window.setTimeout(async () => {
+      setTvBusy(true);
+      try {
+        const response = await fetch(`/api/tv-search?q=${encodeURIComponent(query)}`);
+        const data = await response.json();
+        if (!response.ok) throw new Error('TV search failed');
+        setTvResults(data.shows ?? []);
+        setTvOpen(true);
+      } catch {
+        setTvResults([]);
+      } finally {
+        setTvBusy(false);
       }
-    } else if (e.key === 'Escape') {
-      setOpen(false);
-    }
-  };
+    }, 280);
+    return () => window.clearTimeout(timer);
+  }, [programmeName, programmeId]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const canSubmit = useMemo(() => locationQuery.trim().length >= 3 && Boolean(dateTime) && duration >= 15, [locationQuery, dateTime, duration]);
+
+  function pickLocation(item: LocationSuggestion) {
+    setVenue({
+      address: item.label,
+      name: item.name,
+      lat: item.lat,
+      lng: item.lng,
+      timezone: item.timezone,
+      countryCode: item.countryCode,
+      state: item.state,
+      city: item.city,
+    });
+    setLocationQuery(item.label);
+    if (item.name && !venueName) setVenueName(item.name);
+    setLocationOpen(false);
+  }
+
+  function pickProgramme(item: TvSuggestion) {
+    setProgrammeName(item.name);
+    setProgrammeId(item.id);
+    setTvOpen(false);
+  }
+
+  function submit(event: React.FormEvent) {
+    event.preventDefault();
+    if (!canSubmit || isLoading) return;
     onSubmit({
       venue: {
-        address: selected ? selected.label : query.trim(),
-        lat: selected?.lat,
-        lng: selected?.lng,
-        name: venueName || undefined,
+        ...(venue ?? { address: locationQuery.trim() }),
+        address: venue?.address === locationQuery ? venue.address : locationQuery.trim(),
+        name: venueName.trim() || undefined,
       },
       dateTime,
       durationMinutes: duration,
+      eventKind,
       isOutdoor,
-      footballTeam: footballTeam || undefined,
-      programmeName: programmeName || undefined,
+      footballTeam: footballTeam.trim() || undefined,
+      programmeName: programmeName.trim() || undefined,
+      programmeId,
     });
-  };
+  }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div ref={boxRef} className="relative">
-        <label htmlFor="location-query" className="block mb-1 font-bold text-sm" style={{ letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ink-soft)' }}>
-          Where?
-        </label>
-
-        <div className="relative">
-          <input
-            id="location-query"
-            type="text"
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              if (selected) setSelected(null);
-            }}
-            onKeyDown={onKeyDown}
-            onFocus={() => suggestions.length > 0 && setOpen(true)}
-            placeholder="Search for a place, or drop the pin on the map below"
-            className="paper-input"
-            style={{ paddingRight: '2.25rem' }}
-            autoComplete="off"
-            aria-autocomplete="list"
-            required
-          />
-          {searching && (
-            <span className="absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" role="status" aria-label="Searching">
-              <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="10" stroke="var(--ink-faint)" strokeWidth="3" opacity="0.35" />
-                <path d="M22 12a10 10 0 0 0-10-10" stroke="var(--berry)" strokeWidth="3" strokeLinecap="round" />
-              </svg>
-            </span>
-          )}
-        </div>
-
-        {open && suggestions.length > 0 && (
-          <ul
-            className="absolute left-0 right-0 mt-2 max-h-72 overflow-y-auto"
-            style={{ background: 'var(--paper-light)', border: '2px solid var(--ink)', boxShadow: '5px 5px 0 var(--shadow-1)', borderRadius: '4px', zIndex: 1100 }}
-          >
-            {suggestions.map((s, i) => (
-              <li key={s.id}>
-                <button
-                  type="button"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => select(s)}
-                  onMouseEnter={() => setHighlight(i)}
-                  className="w-full block text-left px-3 py-2 text-sm cursor-pointer"
-                  style={{ background: i === highlight ? 'var(--paper-dark)' : 'transparent', color: 'var(--ink)' }}
-                >
-                  {s.label}
+    <form className="pixel-form" onSubmit={submit}>
+      <section className="form-section">
+        <div className="step-tag">01 / WHERE</div>
+        <div className="field-stack" ref={locationBox}>
+          <label className="field-label" htmlFor="location">LOCATION</label>
+          <div className="input-shell">
+            <input
+              id="location"
+              className="pixel-input input-big"
+              value={locationQuery}
+              onChange={(event) => {
+                setLocationQuery(event.target.value);
+                if (venue?.address !== event.target.value) setVenue(null);
+              }}
+              onFocus={() => locations.length > 0 && setLocationOpen(true)}
+              placeholder="Type a venue, address or city"
+              autoComplete="off"
+              required
+            />
+            <span className={`input-status ${locationBusy ? 'blink' : ''}`}>{locationBusy ? '...' : venue?.timezone ? 'OK' : '>>'}</span>
+          </div>
+          {locationOpen && locations.length > 0 && (
+            <div className="pixel-popover" role="listbox" aria-label="Location suggestions">
+              {locations.map((item) => (
+                <button type="button" className="popover-option" key={item.id} onClick={() => pickLocation(item)}>
+                  <span>{item.label}</span>
+                  <small>{item.timezone || 'timezone will be resolved'}</small>
                 </button>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {open && searchError && !searching && (
-          <p className="text-xs mt-1" style={{ color: 'var(--berry)' }}>Could not find that place — try a fuller address or drop the pin on the map.</p>
-        )}
-
-        <div className="mt-3 relative" style={{ border: '2px solid var(--ink)', boxShadow: '5px 5px 0 var(--shadow-1)', borderRadius: '4px', background: 'var(--paper-dark)' }}>
-          <LocationMap lat={selected?.lat} lng={selected?.lng} onPlace={handlePlace} />
-          <span className="paper-label absolute top-2 left-2 pointer-events-none" style={{ background: 'var(--ink)' }}>{selected ? 'Pinned' : 'Map'}</span>
-        </div>
-
-        <div className="flex items-center justify-between mt-2">
-          <p className="text-xs" style={{ color: resolving ? 'var(--ink-faint)' : 'var(--ink-soft)' }}>
-            {resolving ? 'Reading the address…' : 'Drag the pin to adjust · click to drop'}
-          </p>
-          {selected && (
-            <a
-              href={`https://www.google.com/maps?q=${selected.lat},${selected.lng}`}
-              target="_blank"
-              rel="noreferrer"
-              className="text-xs"
-              style={{ color: 'var(--ink-soft)', textDecoration: 'underline' }}
-            >
-              Open in Google Maps ↗
-            </a>
+              ))}
+            </div>
           )}
+          <p className="microcopy">LOCATION MATCHING BY <a href="https://www.geoapify.com/" target="_blank" rel="noreferrer">GEOAPIFY</a>. THE EVENT TIME IS INTERPRETED IN THE VENUE&apos;S TIMEZONE.</p>
         </div>
-      </div>
 
-      <div>
-        <label htmlFor="venue-name" className="block mb-1 font-bold text-sm" style={{ letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ink-soft)' }}>
-          Venue name
-        </label>
-        <input
-          id="venue-name"
-          type="text"
-          value={venueName}
-          onChange={(e) => setVenueName(e.target.value)}
-          placeholder="e.g. The Royal Oak"
-          className="paper-input"
-        />
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-        <div>
-          <label className="block mb-1 font-bold text-sm" style={{ letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ink-soft)' }}>
-            Date &amp; time
-          </label>
-          <input
-            type="datetime-local"
-            value={dateTime}
-            onChange={(e) => setDateTime(e.target.value)}
-            className="paper-input"
-            required
-          />
-        </div>
-        <div>
-          <label className="block mb-1 font-bold text-sm" style={{ letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ink-soft)' }}>
-            Duration (min)
-          </label>
-          <input
-            type="number"
-            value={duration}
-            onChange={(e) => setDuration(parseInt(e.target.value) || 90)}
-            min={15}
-            max={480}
-            className="paper-input"
-          />
-        </div>
-      </div>
-
-      <button
-        type="button"
-        onClick={() => setIsOutdoor(!isOutdoor)}
-        className="paper-btn w-full flex items-center justify-between !py-3"
-      >
-        <span className="font-bold">{isOutdoor ? 'Outside' : 'Indoors'}</span>
-        <input
-          type="checkbox"
-          checked={isOutdoor}
-          onChange={(e) => setIsOutdoor(e.target.checked)}
-          className="paper-check"
-          aria-label="Outdoor event"
-        />
-      </button>
-
-      <button
-        type="button"
-        onClick={() => setShowOptional(!showOptional)}
-        className="w-full text-left font-bold"
-        style={{ color: 'var(--ink-soft)', letterSpacing: '0.04em' }}
-      >
-        {showOptional ? '−' : '+'} Optional preferences
-      </button>
-
-      {showOptional && (
-        <div className="space-y-6 animate-in" style={{ borderLeft: '2px dashed var(--ink-faint)', paddingLeft: '1rem' }}>
-          <div>
-            <label className="block mb-1 font-bold text-sm" style={{ letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ink-soft)' }}>
-              Football team
-            </label>
-            <input
-              type="text"
-              value={footballTeam}
-              onChange={(e) => setFootballTeam(e.target.value)}
-              placeholder="e.g. Arsenal"
-              className="paper-input"
-            />
+        <div className="form-grid two">
+          <div className="field-stack">
+            <label className="field-label" htmlFor="venue-name">VENUE NAME <span>OPTIONAL</span></label>
+            <input id="venue-name" className="pixel-input" value={venueName} onChange={(event) => setVenueName(event.target.value)} placeholder="e.g. Barbican Centre" />
           </div>
-          <div>
-            <label className="block mb-1 font-bold text-sm" style={{ letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ink-soft)' }}>
-              TV programme
-            </label>
-            <input
-              type="text"
-              value={programmeName}
-              onChange={(e) => setProgrammeName(e.target.value)}
-              placeholder="e.g. Match of the Day"
-              className="paper-input"
-            />
+          <div className="field-stack">
+            <label className="field-label">INDOOR / OUTDOOR</label>
+            <div className="pixel-segment" role="group" aria-label="Indoor or outdoor">
+              <button type="button" className={!isOutdoor ? 'active' : ''} onClick={() => setIsOutdoor(false)}>INDOOR</button>
+              <button type="button" className={isOutdoor ? 'active' : ''} onClick={() => setIsOutdoor(true)}>OUTDOOR</button>
+            </div>
           </div>
         </div>
-      )}
+      </section>
 
-      <button
-        type="submit"
-        disabled={isLoading}
-        className="paper-btn paper-btn-accent w-full !py-4 text-lg"
-      >
-        {isLoading ? 'Cutting the report…' : 'Check for conflicts ✂'}
+      <section className="form-section">
+        <div className="step-tag">02 / WHAT</div>
+        <label className="field-label">EVENT TYPE</label>
+        <div className="kind-grid">
+          {EVENT_KINDS.map((kind) => (
+            <button
+              type="button"
+              key={kind.value}
+              className={`kind-tile ${eventKind === kind.value ? 'active' : ''}`}
+              onClick={() => {
+                setEventKind(kind.value);
+                if (kind.value === 'outdoor_activity') setIsOutdoor(true);
+              }}
+            >
+              <strong>{kind.label}</strong>
+              <span>{kind.hint}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="form-section">
+        <div className="step-tag">03 / WHEN</div>
+        <div className="form-grid two">
+          <div className="field-stack">
+            <label className="field-label" htmlFor="date-time">START</label>
+            <input id="date-time" type="datetime-local" className="pixel-input" value={dateTime} onChange={(event) => setDateTime(event.target.value)} required />
+          </div>
+          <div className="field-stack">
+            <label className="field-label" htmlFor="duration">DURATION</label>
+            <select id="duration" className="pixel-input" value={duration} onChange={(event) => setDuration(Number(event.target.value))}>
+              {[30, 45, 60, 90, 120, 150, 180, 240, 360].map((minutes) => <option key={minutes} value={minutes}>{minutes < 60 ? `${minutes} MIN` : `${minutes / 60} ${minutes === 60 ? 'HOUR' : 'HOURS'}`}</option>)}
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <section className="form-section optional-zone">
+        <div className="step-tag">04 / YOUR CROWD <span>OPTIONAL</span></div>
+        <p className="section-copy">Only add things your group actually cares about. We do not guess private preferences.</p>
+        <div className="form-grid two">
+          <div className="field-stack">
+            <label className="field-label" htmlFor="football">FOOTBALL TEAM</label>
+            <input id="football" className="pixel-input" value={footballTeam} onChange={(event) => setFootballTeam(event.target.value)} placeholder="e.g. Arsenal" />
+          </div>
+          <div className="field-stack" ref={tvBox}>
+            <label className="field-label" htmlFor="programme">TV PROGRAMME</label>
+            <div className="input-shell">
+              <input
+                id="programme"
+                className="pixel-input"
+                value={programmeName}
+                onChange={(event) => { setProgrammeName(event.target.value); setProgrammeId(undefined); }}
+                onFocus={() => tvResults.length > 0 && setTvOpen(true)}
+                placeholder="e.g. The Great British Bake Off"
+                autoComplete="off"
+              />
+              <span className={`input-status small ${tvBusy ? 'blink' : ''}`}>{programmeId ? 'OK' : tvBusy ? '...' : ''}</span>
+            </div>
+            {tvOpen && tvResults.length > 0 && (
+              <div className="pixel-popover compact" role="listbox" aria-label="TV programme suggestions">
+                {tvResults.map((item) => (
+                  <button type="button" className="popover-option" key={item.id} onClick={() => pickProgramme(item)}>
+                    <span>{item.name}</span><small>{item.detail}</small>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <button className="pixel-cta" type="submit" disabled={!canSubmit || isLoading}>
+        <span className="cta-pixels" aria-hidden="true"><i /><i /><i /></span>
+        {isLoading ? 'CHECKING THE OUTSIDE WORLD...' : 'CHECK THIS DATE'}
+        <span aria-hidden="true">→</span>
       </button>
     </form>
   );

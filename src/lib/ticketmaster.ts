@@ -1,51 +1,72 @@
-import { CheckResult } from '@/types';
+import { CheckResult, EventInput } from '@/types';
+import { cached } from './cache';
+import { fetchJson } from './http';
+import { eventWindow, formatInstant } from './time';
+import { defaultPreference } from './preferences';
+import { geohash, haversineKm } from './geo';
 
-export async function checkTicketmaster(
-  lat: number,
-  lng: number,
-  dateTime: string,
-  radiusKm: number = 10
-): Promise<CheckResult> {
+type TMEvent = {
+  id: string;
+  name: string;
+  url?: string;
+  dates?: { start?: { dateTime?: string; localDate?: string; localTime?: string }; end?: { dateTime?: string } };
+  _embedded?: { venues?: Array<{ name?: string; location?: { latitude?: string; longitude?: string } }> };
+};
+
+type TMResponse = { _embedded?: { events?: TMEvent[] } };
+
+export async function checkTicketmaster(input: EventInput, radiusKm = 8): Promise<CheckResult> {
   const apiKey = process.env.TICKETMASTER_API_KEY;
-  if (!apiKey) {
-    return { success: false, error: 'Ticketmaster API key not configured', source: 'Ticketmaster Discovery API', lastChecked: new Date().toISOString() };
-  }
+  const checkedAt = new Date().toISOString();
+  const base = { source: 'Ticketmaster Discovery API', sourceId: 'ticketmaster', url: 'https://developer.ticketmaster.com/products-and-docs/apis/discovery-api/v2/', lastChecked: checkedAt };
+  if (!apiKey) return { ...base, state: 'unavailable', data: [], message: 'API key not configured' };
+  const { lat, lng, timezone } = input.venue;
+  if (typeof lat !== 'number' || typeof lng !== 'number' || !timezone) return { ...base, state: 'not_applicable', data: [], message: 'Location or timezone unavailable' };
 
   try {
-    const startDateTime = new Date(dateTime).toISOString();
-    const endDateTime = new Date(new Date(dateTime).getTime() + 24 * 60 * 60 * 1000).toISOString();
-    const url = new URL('https://app.ticketmaster.com/discovery/v2/events.json');
-    url.searchParams.append('apikey', apiKey);
-    url.searchParams.append('latlong', `${lat},${lng}`);
-    url.searchParams.append('radius', radiusKm.toString());
-    url.searchParams.append('unit', 'km');
-    url.searchParams.append('startDateTime', startDateTime);
-    url.searchParams.append('endDateTime', endDateTime);
-    url.searchParams.append('size', '20');
-    url.searchParams.append('sort', 'distance,asc');
+    const { start, end } = eventWindow(input.dateTime, input.durationMinutes, timezone);
+    const from = new Date(start.getTime() - 2 * 60 * 60_000);
+    const to = new Date(end.getTime() + 2 * 60 * 60_000);
+    const key = `ticketmaster:${lat.toFixed(3)}:${lng.toFixed(3)}:${from.toISOString().slice(0, 13)}:${to.toISOString().slice(0, 13)}`;
+    const data = await cached(key, 10 * 60_000, async () => {
+      const url = new URL('https://app.ticketmaster.com/discovery/v2/events.json');
+      url.searchParams.set('apikey', apiKey);
+      url.searchParams.set('geoPoint', geohash(lat, lng));
+      url.searchParams.set('radius', String(radiusKm));
+      url.searchParams.set('unit', 'km');
+      url.searchParams.set('startDateTime', from.toISOString());
+      url.searchParams.set('endDateTime', to.toISOString());
+      url.searchParams.set('size', '20');
+      url.searchParams.set('sort', 'distance,asc');
+      return fetchJson<TMResponse>(url.toString());
+    });
 
-    const response = await fetch(url.toString());
-    const data = await response.json();
-
-    if (!data._embedded?.events) {
-      return { success: true, data: [], source: 'Ticketmaster Discovery API', lastChecked: new Date().toISOString() };
-    }
-
-    const conflicts = data._embedded.events.map((event: { name: string; dates: { start: { localDate: string; localTime: string } }; _embedded: { venues: { distance: { value: number } }[] }; url: string }) => ({
-      id: `tm-${event.name}-${event.dates.start.localDate}`,
-      type: 'nearby_event' as const,
-      title: event.name,
-      description: `Event at ${event.dates.start.localTime} on ${event.dates.start.localDate}`,
-      impact: 'medium' as const,
-      source: 'Ticketmaster Discovery API',
-      sourceUrl: event.url,
-      preference: 'neutral' as const,
-      dateTime: `${event.dates.start.localDate}T${event.dates.start.localTime}`,
-      distance: event._embedded.venues?.[0]?.distance?.value,
-    }));
-
-    return { success: true, data: conflicts, source: 'Ticketmaster Discovery API', lastChecked: new Date().toISOString() };
+    const conflicts = (data._embedded?.events ?? []).map((event) => {
+      const venue = event._embedded?.venues?.[0];
+      const venueLat = Number(venue?.location?.latitude);
+      const venueLng = Number(venue?.location?.longitude);
+      const distanceKm = Number.isFinite(venueLat) && Number.isFinite(venueLng) ? haversineKm(lat, lng, venueLat, venueLng) : undefined;
+      const startsAt = event.dates?.start?.dateTime;
+      const time = startsAt ? formatInstant(startsAt, timezone, { hour: '2-digit', minute: '2-digit' }) : event.dates?.start?.localTime?.slice(0, 5) ?? 'time TBA';
+      const where = venue?.name ? ` at ${venue.name}` : '';
+      const distance = typeof distanceKm === 'number' ? ` · ${distanceKm.toFixed(distanceKm < 2 ? 1 : 0)} km away` : '';
+      return {
+        id: `tm-${event.id}`,
+        type: 'nearby_event' as const,
+        title: event.name,
+        description: `${time}${where}${distance}`,
+        impact: (typeof distanceKm === 'number' && distanceKm <= 1.5 ? 'medium' : 'low') as 'medium' | 'low',
+        source: base.source,
+        sourceUrl: event.url,
+        preference: defaultPreference('nearby_event', input),
+        startsAt,
+        endsAt: event.dates?.end?.dateTime,
+        distanceKm,
+        placeName: venue?.name,
+      };
+    });
+    return { ...base, state: 'checked', data: conflicts };
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error', source: 'Ticketmaster Discovery API', lastChecked: new Date().toISOString() };
+    return { ...base, state: 'unavailable', data: [], message: error instanceof Error ? error.message : 'Request failed' };
   }
 }

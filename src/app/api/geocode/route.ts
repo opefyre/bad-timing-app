@@ -1,5 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+type Feature = {
+  properties: {
+    place_id?: string;
+    formatted?: string;
+    name?: string;
+    country_code?: string;
+    state?: string;
+    city?: string;
+    timezone?: { name?: string };
+  };
+  geometry: { coordinates: [number, number] };
+};
+
 export async function GET(request: NextRequest) {
   const q = request.nextUrl.searchParams.get('q');
   const apiKey = process.env.GEOAPIFY_API_KEY;
@@ -7,21 +20,24 @@ export async function GET(request: NextRequest) {
   if (!q || q.trim().length < 2) return NextResponse.json({ suggestions: [] });
 
   const url = new URL('https://api.geoapify.com/v1/geocode/autocomplete');
-  url.searchParams.append('text', q.trim());
-  url.searchParams.append('limit', '6');
-  url.searchParams.append('apiKey', apiKey);
+  url.searchParams.set('text', q.trim());
+  url.searchParams.set('limit', '7');
+  url.searchParams.set('apiKey', apiKey);
 
   try {
     const res = await fetch(url.toString(), { cache: 'no-store' });
     if (!res.ok) return NextResponse.json({ error: 'Geocoding failed' }, { status: res.status });
-    const data = await res.json();
-    const suggestions = (data.features ?? []).map((f: { properties: Record<string, unknown>; geometry: { coordinates: number[] } }) => ({
-      id: String(f.properties.place_id ?? Math.random()),
-      label: String(f.properties.formatted ?? ''),
-      formatted: String(f.properties.formatted ?? ''),
-      name: f.properties.name ? String(f.properties.name) : undefined,
-      lat: f.geometry.coordinates[1],
-      lng: f.geometry.coordinates[0],
+    const data = await res.json() as { features?: Feature[] };
+    const suggestions = (data.features ?? []).map((feature, index) => ({
+      id: feature.properties.place_id ?? `result-${index}`,
+      label: feature.properties.formatted ?? '',
+      name: feature.properties.name,
+      lat: feature.geometry.coordinates[1],
+      lng: feature.geometry.coordinates[0],
+      timezone: feature.properties.timezone?.name,
+      countryCode: feature.properties.country_code,
+      state: feature.properties.state,
+      city: feature.properties.city,
     }));
     return NextResponse.json({ suggestions });
   } catch {

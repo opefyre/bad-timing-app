@@ -1,45 +1,71 @@
-import { CheckResult } from '@/types';
+import { CheckResult, EventInput } from '@/types';
+import { cached } from './cache';
+import { fetchJson } from './http';
+import { eventWindow, formatInstant, overlaps } from './time';
+import { defaultPreference } from './preferences';
 
-export async function checkFootballData(team: string, dateTime: string): Promise<CheckResult> {
+type Match = {
+  id: number;
+  utcDate: string;
+  status: string;
+  competition?: { name?: string };
+  homeTeam: { name: string; shortName?: string; tla?: string };
+  awayTeam: { name: string; shortName?: string; tla?: string };
+};
+type MatchesResponse = { matches?: Match[] };
+
+function normalise(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+function teamMatches(team: string, match: Match) {
+  const needle = normalise(team);
+  const names = [match.homeTeam.name, match.homeTeam.shortName, match.homeTeam.tla, match.awayTeam.name, match.awayTeam.shortName, match.awayTeam.tla]
+    .filter(Boolean).map((value) => normalise(String(value)));
+  return names.some((name) => name === needle || name.includes(needle) || needle.includes(name));
+}
+
+export async function checkFootballData(input: EventInput): Promise<CheckResult> {
   const apiKey = process.env.FOOTBALL_DATA_API_KEY;
-  if (!apiKey) {
-    return { success: false, error: 'Football Data API key not configured', source: 'football-data.org', lastChecked: new Date().toISOString() };
-  }
+  const checkedAt = new Date().toISOString();
+  const base = { source: 'football-data.org', sourceId: 'football', url: 'https://www.football-data.org/', lastChecked: checkedAt };
+  if (!input.footballTeam) return { ...base, state: 'not_applicable', data: [], message: 'No team selected' };
+  if (!apiKey) return { ...base, state: 'unavailable', data: [], message: 'API key not configured' };
+  const timezone = input.venue.timezone;
+  if (!timezone) return { ...base, state: 'unavailable', data: [], message: 'Venue timezone unavailable' };
 
   try {
-    const startDate = new Date(dateTime).toISOString().split('T')[0];
-    const endDate = new Date(new Date(dateTime).getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    const url = new URL('https://api.football-data.org/v4/matches');
-    url.searchParams.append('dateFrom', startDate);
-    url.searchParams.append('dateTo', endDate);
+    const { start, end } = eventWindow(input.dateTime, input.durationMinutes, timezone);
+    const queryFrom = new Date(start.getTime() - 6 * 60 * 60_000).toISOString().slice(0, 10);
+    const queryTo = new Date(end.getTime() + 6 * 60 * 60_000).toISOString().slice(0, 10);
+    const key = `football:${queryFrom}:${queryTo}`;
+    const data = await cached(key, 5 * 60_000, async () => {
+      const url = new URL('https://api.football-data.org/v4/matches');
+      url.searchParams.set('dateFrom', queryFrom);
+      url.searchParams.set('dateTo', queryTo);
+      return fetchJson<MatchesResponse>(url.toString(), { headers: { 'X-Auth-Token': apiKey } });
+    });
 
-    const response = await fetch(url.toString(), { headers: { 'X-Auth-Token': apiKey } });
-    const data = await response.json();
+    const conflicts = (data.matches ?? []).filter((match) => teamMatches(input.footballTeam!, match)).flatMap((match) => {
+      const matchStart = new Date(match.utcDate);
+      const matchEnd = new Date(matchStart.getTime() + 120 * 60_000);
+      if (!overlaps(start, end, matchStart, matchEnd)) return [];
+      return [{
+        id: `fd-${match.id}`,
+        type: 'sport' as const,
+        title: `${match.homeTeam.name} vs ${match.awayTeam.name}`,
+        description: `${match.competition?.name ?? 'Football'} · ${formatInstant(match.utcDate, timezone)}`,
+        impact: 'high' as const,
+        source: base.source,
+        sourceUrl: base.url,
+        preference: defaultPreference('sport', input),
+        startsAt: match.utcDate,
+        endsAt: matchEnd.toISOString(),
+      }];
+    });
 
-    if (!data.matches) {
-      return { success: true, data: [], source: 'football-data.org', lastChecked: new Date().toISOString() };
-    }
-
-    const teamLower = team.toLowerCase();
-    const matches = data.matches.filter((match: { homeTeam: { name: string; shortName: string }; awayTeam: { name: string; shortName: string } }) =>
-      match.homeTeam.name.toLowerCase().includes(teamLower) || match.homeTeam.shortName.toLowerCase().includes(teamLower) ||
-      match.awayTeam.name.toLowerCase().includes(teamLower) || match.awayTeam.shortName.toLowerCase().includes(teamLower)
-    );
-
-    const conflicts = matches.map((match: { id: number; homeTeam: { name: string }; awayTeam: { name: string }; utcDate: string; competition: { name: string } }) => ({
-      id: `fd-${match.id}`,
-      type: 'sport' as const,
-      title: `${match.homeTeam.name} vs ${match.awayTeam.name}`,
-      description: `${match.competition.name} match on ${new Date(match.utcDate).toLocaleString()}`,
-      impact: 'high' as const,
-      source: 'football-data.org',
-      sourceUrl: 'https://www.football-data.org',
-      preference: 'avoid' as const,
-      dateTime: match.utcDate,
-    }));
-
-    return { success: true, data: conflicts, source: 'football-data.org', lastChecked: new Date().toISOString() };
+    return { ...base, state: 'checked', data: conflicts };
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error', source: 'football-data.org', lastChecked: new Date().toISOString() };
+    return { ...base, state: 'unavailable', data: [], message: error instanceof Error ? error.message : 'Request failed' };
   }
 }
