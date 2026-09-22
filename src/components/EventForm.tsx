@@ -4,10 +4,11 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import DurationPicker from '@/components/DurationPicker';
 import LocationMap from '@/components/LocationMap';
 import StartPicker from '@/components/StartPicker';
-import { EventInput, EventKind, VenueInput } from '@/types';
+import { EventInput, EventKind, FootballTeam, VenueInput } from '@/types';
 
 type LocationSuggestion = VenueInput & { id: string; label: string; lat: number; lng: number };
 type TvSuggestion = { id: number; name: string; detail?: string };
+type FootballSuggestion = { id: number; name: string; detail?: string };
 
 const EVENT_KINDS: Array<{ value: EventKind; label: string }> = [
   { value: 'birthday', label: 'Birthday' },
@@ -50,7 +51,12 @@ export default function EventForm({ onSubmit, isLoading, initialData }: Props) {
   const [radiusKm,setRadiusKm]=useState(initialData?.radiusKm??3);
   const [includeNews,setIncludeNews]=useState(initialData?.includeNews??false);
   const [needsInternet,setNeedsInternet]=useState(initialData?.needsInternet??false);
-  const [footballTeam, setFootballTeam] = useState(initialData?.footballTeam ?? '');
+  const [footballTeams, setFootballTeams] = useState<FootballTeam[]>(initialData?.footballTeams ?? []);
+  const [footballQuery, setFootballQuery] = useState('');
+  const [footballResults, setFootballResults] = useState<FootballSuggestion[]>([]);
+  const [footballOpen, setFootballOpen] = useState(false);
+  const [footballBusy, setFootballBusy] = useState(false);
+  const footballBox = useRef<HTMLDivElement>(null);
 
   const [programmeName, setProgrammeName] = useState(initialData?.programmeName ?? '');
   const [programmeId, setProgrammeId] = useState<number | undefined>(initialData?.programmeId);
@@ -63,6 +69,7 @@ export default function EventForm({ onSubmit, isLoading, initialData }: Props) {
     const handler = (event: PointerEvent) => {
       if (locationBox.current && !locationBox.current.contains(event.target as Node)) setLocationOpen(false);
       if (tvBox.current && !tvBox.current.contains(event.target as Node)) setTvOpen(false);
+      if (footballBox.current && !footballBox.current.contains(event.target as Node)) setFootballOpen(false);
     };
     document.addEventListener('pointerdown', handler);
     return () => document.removeEventListener('pointerdown', handler);
@@ -111,6 +118,28 @@ export default function EventForm({ onSubmit, isLoading, initialData }: Props) {
     }, 280);
     return () => {window.clearTimeout(timer);controller.abort();};
   }, [programmeName, programmeId]);
+
+  useEffect(() => {
+    const query = footballQuery.trim();
+    if (query.length < 2) return;
+    const controller=new AbortController();
+    const timer = window.setTimeout(async () => {
+      setFootballBusy(true);
+      try {
+        const response = await fetch(`/api/football-search?q=${encodeURIComponent(query)}`,{signal:controller.signal});
+        const data = await response.json();
+        if(controller.signal.aborted)return;
+        if (!response.ok) throw new Error('Team search failed');
+        setFootballResults((data.teams ?? []).map((team: FootballSuggestion) => ({ id: team.id, name: team.name, detail: team.detail })));
+        setFootballOpen(true);
+      } catch {
+        setFootballResults([]);
+      } finally {
+        setFootballBusy(false);
+      }
+    }, 280);
+    return () => {window.clearTimeout(timer);controller.abort();};
+  }, [footballQuery]);
 
   const canSubmit = useMemo(() => locationQuery.trim().length >= 3 && Boolean(dateTime) && duration >= 15 && (!programmeName.trim()||!!programmeId), [locationQuery, dateTime, duration,programmeName,programmeId]);
 
@@ -180,6 +209,17 @@ export default function EventForm({ onSubmit, isLoading, initialData }: Props) {
     setTvOpen(false);
   }
 
+  function addFootballTeam(item: FootballSuggestion) {
+    setFootballTeams((current) => current.some((team) => team.id === item.id) ? current : [...current, { id: item.id, name: item.name }]);
+    setFootballQuery('');
+    setFootballResults([]);
+    setFootballOpen(false);
+  }
+
+  function removeFootballTeam(id: number) {
+    setFootballTeams((current) => current.filter((team) => team.id !== id));
+  }
+
   function submit(event: React.FormEvent) {
     event.preventDefault();
     if (!canSubmit || isLoading) return;
@@ -193,7 +233,7 @@ export default function EventForm({ onSubmit, isLoading, initialData }: Props) {
       durationMinutes: duration,
       eventKind,
       isOutdoor,
-      footballTeam: footballTeam.trim() || undefined,
+      footballTeams: footballTeams.length ? footballTeams : undefined,
       programmeName: programmeName.trim() || undefined,
       programmeId,radiusKm,includeNews,needsInternet,
     });
@@ -286,9 +326,42 @@ export default function EventForm({ onSubmit, isLoading, initialData }: Props) {
       <section className="form-section optional-zone">
         <div className="section-title">Anything your group follows? <span>optional</span></div>
         <div className="form-grid two">
-          <div className="field-stack">
-            <label className="field-label" htmlFor="football">Football team</label>
-            <input id="football" className="pixel-input" value={footballTeam} onChange={(event) => setFootballTeam(event.target.value)} />
+          <div className="field-stack" ref={footballBox}>
+            <div className="field-label-row">
+              <label className="field-label" htmlFor="football">Football teams <span>optional</span></label>
+              {footballBusy && <span className="field-state">Searching…</span>}
+            </div>
+            <input
+              id="football"
+              className="pixel-input"
+              role="combobox"
+              aria-expanded={footballOpen && footballResults.length > 0}
+              aria-controls="football-suggestions"
+              aria-autocomplete="list"
+              value={footballQuery}
+              onChange={(event) => setFootballQuery(event.target.value)}
+              onFocus={() => footballResults.length > 0 && setFootballOpen(true)}
+              placeholder={footballTeams.length ? 'Add another team…' : 'Search teams'}
+              autoComplete="off"
+            />
+            {footballOpen && footballResults.length > 0 && (
+              <div className="pixel-popover compact" id="football-suggestions" role="listbox" aria-multiselectable="true" aria-label="Football team suggestions">
+                {footballResults.map((item) => (
+                  <button type="button" className="popover-option" key={item.id} onClick={() => addFootballTeam(item)}>
+                    <span>{item.name}</span>{item.detail && <small>{item.detail}</small>}
+                  </button>
+                ))}
+              </div>
+            )}
+            {footballTeams.length > 0 && (
+              <div className="team-chips" role="list" aria-label="Selected football teams">
+                {footballTeams.map((team) => (
+                  <button key={team.id} type="button" className="team-chip" onClick={() => removeFootballTeam(team.id)} aria-label={`Remove ${team.name}`}>
+                    <span>{team.name}</span><span aria-hidden="true">×</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           <div className="field-stack" ref={tvBox}>
             <div className="field-label-row">

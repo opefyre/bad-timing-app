@@ -16,6 +16,11 @@ export interface VenueInput {
   countryName?: string;
 }
 
+export interface FootballTeam {
+  id: number;
+  name: string;
+}
+
 export interface EventInput {
   venue: VenueInput;
   /** Venue-local wall-clock value from the custom date/time picker. */
@@ -23,6 +28,9 @@ export interface EventInput {
   durationMinutes: number;
   eventKind: EventKind;
   isOutdoor: boolean;
+  /** Teams followed by this group; fixtures are checked for any of them. */
+  footballTeams?: FootballTeam[];
+  /** Legacy single team string; still accepted when footballTeams is absent. */
   footballTeam?: string;
   programmeName?: string;
   programmeId?: number;

@@ -5,13 +5,14 @@ import { fetchJson } from './http';
 import { eventWindow, formatInstant, overlaps } from './time';
 import { defaultPreference } from './preferences';
 
+type Team = { id?: number; name: string; shortName?: string; tla?: string };
 type Match = {
   id: number;
   utcDate: string;
   status: string;
   competition?: { name?: string };
-  homeTeam: { name: string; shortName?: string; tla?: string };
-  awayTeam: { name: string; shortName?: string; tla?: string };
+  homeTeam: Team;
+  awayTeam: Team;
 };
 type MatchesResponse = { matches?: Match[] };
 
@@ -19,18 +20,25 @@ function normalise(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 }
 
-function teamMatches(team: string, match: Match) {
-  const needle = normalise(team);
-  const names = [match.homeTeam.name, match.homeTeam.shortName, match.homeTeam.tla, match.awayTeam.name, match.awayTeam.shortName, match.awayTeam.tla]
+function teamMatches(team: { id?: number; name: string }, match: Match) {
+  if (typeof team.id === 'number' && team.id > 0 && [match.homeTeam?.id, match.awayTeam?.id].includes(team.id)) return true;
+  const needle = normalise(team.name);
+  const names = [match.homeTeam?.name, match.homeTeam?.shortName, match.homeTeam?.tla, match.awayTeam?.name, match.awayTeam?.shortName, match.awayTeam?.tla]
     .filter(Boolean).map((value) => normalise(String(value)));
-  return names.some((name) => name === needle);
+  return names.includes(needle);
+}
+
+function followedTeams(input: EventInput): Array<{ id?: number; name: string }> {
+  if (input.footballTeams?.length) return input.footballTeams.map((team) => ({ id: team.id, name: team.name }));
+  return input.footballTeam ? [{ name: input.footballTeam }] : [];
 }
 
 export async function checkFootballData(input: EventInput): Promise<CheckResult> {
   const apiKey = process.env.FOOTBALL_DATA_API_KEY;
   const checkedAt = new Date().toISOString();
   const base = { source: 'football-data.org', sourceId: 'football', url: 'https://www.football-data.org/', lastChecked: checkedAt };
-  if (!input.footballTeam) return { ...base, state: 'not_applicable', data: [], message: 'No team selected' };
+  const teams = followedTeams(input);
+  if (!teams.length) return { ...base, state: 'not_applicable', data: [], message: 'No team selected' };
   if (!apiKey) return { ...base, state: 'not_configured', data: [], message: 'Not connected' };
   const timezone = input.venue.timezone;
   if (!timezone) return { ...base, state: 'unavailable', data: [], message: 'Venue timezone unavailable' };
@@ -48,7 +56,7 @@ export async function checkFootballData(input: EventInput): Promise<CheckResult>
     });
 
     if(!Array.isArray(data.matches))throw new Error('Unexpected match response');
-    const conflicts = data.matches.filter((match) => teamMatches(input.footballTeam!, match)).flatMap((match) => {
+    const conflicts = data.matches.filter((match) => teams.some((team) => teamMatches(team, match))).flatMap((match) => {
       if(['CANCELLED','POSTPONED','SUSPENDED'].includes(match.status??''))return [];
       const matchStart = new Date(match.utcDate);
       const matchEnd = new Date(matchStart.getTime() + 120 * 60_000);
@@ -69,7 +77,7 @@ export async function checkFootballData(input: EventInput): Promise<CheckResult>
       }];
     });
 
-    return { ...base, state: 'checked', data: conflicts, message:'Published fixtures in the connected plan only; team names must match a name, short name or abbreviation.' };
+    return { ...base, state: 'checked', data: conflicts, message:'Published fixtures in the connected plan only; selected teams must match a name, short name or abbreviation.' };
   } catch (error) {
     return { ...base, state: 'unavailable', data: [], message: safeMessage(error) };
   }

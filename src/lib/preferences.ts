@@ -2,7 +2,7 @@ import { Conflict, ConflictType, EventInput, EventPreference, PreferenceOverride
 
 export function defaultPreference(type: ConflictType, input: EventInput): EventPreference {
   if ((type === 'sport' || type === 'tv') && input.eventKind === 'screening') return 'plan_around';
-  if (type === 'sport' && input.footballTeam) return 'avoid';
+  if (type === 'sport' && (input.footballTeams?.length || input.footballTeam)) return 'avoid';
   if (type === 'tv' && input.programmeName) return 'avoid';
   if (['transport','road','warning'].includes(type)) return 'avoid';
   if ((type === 'weather' || type === 'daylight') && input.isOutdoor) return 'avoid';
