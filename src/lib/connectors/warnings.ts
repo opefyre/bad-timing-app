@@ -12,7 +12,14 @@ export async function checkIpma(input:EventInput){
     if(!Array.isArray(raw)||!Array.isArray(obj(places).data))throw new Error('Unexpected warnings response');
     const state=norm(input.venue.state??'');const code=input.venue.subdivisionCode?.match(/^(?:PT-)?(\d{2})$/)?.[1];
     const district=code&&Number(code)>=1&&Number(code)<=18?Number(code):undefined;
-    const matches=arr(obj(places).data).map(obj).filter(r=>norm(str(r.local))===state||district!==undefined&&Number(r.idDistrito)===district);
+    const rows=arr(obj(places).data).map(obj);
+    let matches=rows.filter(r=>norm(str(r.local))===state||norm(str(r.local))===norm(input.venue.city??'')||district!==undefined&&Number(r.idDistrito)===district);
+    if(!matches.length&&Number.isFinite(input.venue.lat)&&Number.isFinite(input.venue.lng)){
+      // Geocoders return localised or English names; resolve the district from the nearest IPMA municipality.
+      let nearest:number|undefined,best=Infinity;
+      for(const r of rows){const km=distance(input,str(r.latitude),str(r.longitude));if(km!==undefined&&km<best){best=km;nearest=Number(r.idDistrito);}}
+      if(nearest!==undefined)matches=rows.filter(r=>Number(r.idDistrito)===nearest);
+    }
     const codes=new Set(matches.map(r=>str(r.idAreaAviso)));if(!codes.size)return {data:[],partial:true,message:'Warning district could not be matched reliably'};
     const data:Conflict[]=[];
     for(const r of raw.map(obj)){if(!codes.has(str(r.idAreaAviso))||!['yellow','orange','red'].includes(str(r.awarenessLevelID)))continue;
