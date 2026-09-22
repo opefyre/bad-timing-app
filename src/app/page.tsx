@@ -1,7 +1,9 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useState } from 'react';
 import EventForm from '@/components/EventForm';
+import Logo from '@/components/Logo';
 import ReportView from '@/components/ReportView';
 import { EventInput, EventPreference, PreferenceOverrides, Report, Suggestion } from '@/types';
 
@@ -29,11 +31,11 @@ export default function Home() {
         body: JSON.stringify({ report: baseReport, preferences: prefs }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Alternative search failed');
+      if (!response.ok) throw new Error(data.error || 'Could not find another time');
       setReport((current) => current ? { ...current, suggestions: data.suggestions ?? [] } : current);
       setRecommendationDirty(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not generate alternatives');
+      setError(err instanceof Error ? err.message : 'Could not find another time');
     } finally {
       setRecommendationBusy(false);
     }
@@ -48,7 +50,7 @@ export default function Home() {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input),
       });
       const data = await response.json() as Report & { error?: string };
-      if (!response.ok) throw new Error(data.error || 'Analysis failed');
+      if (!response.ok) throw new Error(data.error || 'Could not check this date');
       const prefs = Object.fromEntries(data.conflicts.map((conflict) => [conflict.id, conflict.preference])) as PreferenceOverrides;
       setPreferences(prefs);
       setReport(data);
@@ -57,7 +59,7 @@ export default function Home() {
       setRecommendationDirty(false);
       void loadAlternatives(data, prefs);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Analysis failed');
+      setError(err instanceof Error ? err.message : 'Could not check this date');
       setPhase('setup');
     } finally {
       setAnalyzing(false);
@@ -97,24 +99,23 @@ export default function Home() {
     <div className="setup-page">
       <div className="pixel-grid-bg" aria-hidden="true" />
       <main className="setup-shell">
-        <header className="hero-block">
-          <div className="logo-mark" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /><i /><i /></div>
-          <p className="eyebrow">PRE-INVITATION REALITY CHECK</p>
-          <h1><span>BAD</span><span>TIMING</span></h1>
-          <p className="hero-copy">What are you overlooking about this place and time?</p>
-          <div className="hero-signal-strip" aria-hidden="true">
-            <span>EVENTS</span><i /> <span>SPORT</span><i /> <span>TV</span><i /> <span>HOLIDAYS</span><i /> <span>WEATHER</span><i /> <span>DAYLIGHT</span><i /> <span>TRANSPORT</span>
-          </div>
+        <header className="site-header">
+          <Link className="brand" href="/" aria-label="Bad Timing home"><Logo size={36} /><strong>BAD TIMING</strong></Link>
+          <Link className="plain-link" href="/data">Data & privacy</Link>
         </header>
 
+        <section className="hero-block clean-hero">
+          <h1>BAD<br/><span>TIMING</span></h1>
+          <p>What might interfere with your event?</p>
+        </section>
+
         <section className="form-panel">
-          <div className="form-panel-head"><span>NEW CHECK</span><span>PUBLIC DATA ONLY</span></div>
-          {error && <div className="inline-error" role="alert"><strong>CHECK FAILED</strong><span>{error}</span></div>}
+          {error && <div className="inline-error" role="alert"><span>{error}</span></div>}
           <EventForm onSubmit={analyze} isLoading={analyzing} initialData={lastInput} />
         </section>
 
-        <footer className="setup-footer">
-          <span>NO PRIVATE CALENDARS.</span><span>NO FAKE SUCCESS SCORE.</span><span>YOU DECIDE WHAT MATTERS.</span>
+        <footer className="simple-footer">
+          <Link href="/data">Data & privacy</Link>
         </footer>
       </main>
     </div>

@@ -1,54 +1,62 @@
 # BAD TIMING
 
-**Check the date before you send the invitation.**
+BAD TIMING checks public signals around a proposed event, then lets the organiser decide what matters: **Avoid it**, **Doesn't matter**, or **Plan around it**.
 
-BAD TIMING checks public outside-world signals around an event — nearby Ticketmaster events, selected football fixtures, selected TV programmes, UK bank holidays, MET Norway weather, daylight, and London TfL disruptions — then lets the organiser decide how each finding should be treated:
+## Included checks
 
-- **Avoid it** — a hard conflict the recommendation engine should try to remove.
-- **Doesn't matter** — ignore it when suggesting alternatives.
-- **Plan around it** — keep it visible as an opportunity/soft objective while fixing hard conflicts.
+- Ticketmaster nearby events
+- football-data.org fixtures for an optional team
+- TVmaze airings for an optional programme
+- GOV.UK bank holidays where relevant
+- MET Norway weather
+- Sunrise-Sunset daylight
+- TfL disruption data for London
+- Geoapify search, reverse geocoding and venue timezone
+- OpenStreetMap interactive map tiles
 
-The alternative engine re-runs the checks against real candidate times and nearby days; it does not assume a shift solved a conflict.
+Alternatives are checked again against the data sources instead of assuming a time shift solved a conflict.
 
-## Local setup
+## Run locally
 
-1. Install dependencies: `npm install`
-2. Copy `.env.example` to `.env.local`
-3. Add the API keys you use.
-4. Run `npm run dev`
-5. Open `http://localhost:3000`
+```bash
+npm install
+cp .env.example .env.local
+npm run dev
+```
 
-## Environment variables
+Add the API keys you want to use to `.env.local`.
 
 ```bash
 GEOAPIFY_API_KEY=
 TICKETMASTER_API_KEY=
 FOOTBALL_DATA_API_KEY=
-
-# Optional. TfL may require registered credentials for production traffic.
-TFL_APP_ID=
 TFL_APP_KEY=
 
-# MET asks clients to identify themselves with contact information.
-MET_USER_AGENT="BadTiming/1.0 contact: your-email@example.com"
+# Optional on localhost. Use a real contact/site identifier if you enable it.
+MET_USER_AGENT=
 ```
 
-TVmaze, GOV.UK Bank Holidays and Sunrise-Sunset do not require API keys.
+TVmaze, GOV.UK, Sunrise-Sunset and OpenStreetMap do not need app API keys.
 
-## Important product notes
+## Architecture
 
-- Event input time is treated as **venue-local time**, using Geoapify's IANA timezone metadata.
-- TfL is only queried for venues inside Greater London.
-- GOV.UK holidays are only queried for Great Britain / Northern Ireland and the correct division is selected from the geocoded region.
-- Weather clearly reports when the event is outside the currently returned forecast range.
-- Source failures are shown as unavailable/out-of-range; they are never silently presented as “nothing found”.
-- Sunrise-Sunset and TVmaze attribution is displayed in the report UI.
-- Ticketmaster terms should be reviewed before monetising a product that uses their data.
+The browser handles the UI and interactive map. Small Next.js serverless routes handle the external checks. There is no database, account system or persistent application server.
 
-## Verification
+The proxy layer is intentional: moving every check into the browser would publish API credentials, and MET Norway has production client-identification requirements that are awkward for direct browser requests. A normal Vercel/Cloudflare-compatible Next.js deployment is enough; there is no separate backend service to operate.
+
+## Important notes
+
+- Event time is interpreted in the venue's timezone.
+- The map supports search, click-to-pick, draggable pin, pan/zoom and explicit browser geolocation.
+- TfL is only queried for Greater London.
+- UK bank holidays are only queried for applicable UK locations.
+- Provider failures and dates outside data coverage are not reported as “clear”.
+- Ticketmaster's terms should be reviewed before monetisation.
+- The `/data` page documents providers, privacy considerations and current terms links.
+
+## Check the project
 
 ```bash
-npm run lint
-npx tsc --noEmit
+npm run check
 npm run build
 ```

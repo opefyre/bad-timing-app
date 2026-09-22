@@ -15,6 +15,10 @@ type TMEvent = {
 
 type TMResponse = { _embedded?: { events?: TMEvent[] } };
 
+function ticketmasterDate(date: Date) {
+  return date.toISOString().replace(/\.\d{3}Z$/, 'Z');
+}
+
 export async function checkTicketmaster(input: EventInput, radiusKm = 8): Promise<CheckResult> {
   const apiKey = process.env.TICKETMASTER_API_KEY;
   const checkedAt = new Date().toISOString();
@@ -34,8 +38,8 @@ export async function checkTicketmaster(input: EventInput, radiusKm = 8): Promis
       url.searchParams.set('geoPoint', geohash(lat, lng));
       url.searchParams.set('radius', String(radiusKm));
       url.searchParams.set('unit', 'km');
-      url.searchParams.set('startDateTime', from.toISOString());
-      url.searchParams.set('endDateTime', to.toISOString());
+      url.searchParams.set('startDateTime', ticketmasterDate(from));
+      url.searchParams.set('endDateTime', ticketmasterDate(to));
       url.searchParams.set('size', '20');
       url.searchParams.set('sort', 'distance,asc');
       return fetchJson<TMResponse>(url.toString());

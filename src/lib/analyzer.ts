@@ -23,7 +23,9 @@ function impactRank(impact: Conflict['impact']) {
   return impact === 'high' ? 0 : impact === 'medium' ? 1 : 2;
 }
 
-export async function analyzeEvent(rawInput: EventInput): Promise<Report> {
+export interface AnalysisContext { siteOrigin?: string }
+
+export async function analyzeEvent(rawInput: EventInput, context: AnalysisContext = {}): Promise<Report> {
   let input: EventInput = { ...rawInput, venue: { ...rawInput.venue } };
   let geoStatus: SourceStatus;
   const checkedAt = new Date().toISOString();
@@ -46,7 +48,7 @@ export async function analyzeEvent(rawInput: EventInput): Promise<Report> {
     checkFootballData(input),
     checkTVmaze(input),
     checkBankHolidays(input),
-    checkWeather(input),
+    checkWeather(input, context.siteOrigin),
     checkDaylight(input),
     checkTfLDisruptions(input),
   ]);
@@ -60,7 +62,7 @@ export async function analyzeEvent(rawInput: EventInput): Promise<Report> {
   const sources = [geoStatus, ...results.map(sourceStatus)];
   const coverageGaps = sources
     .filter((source) => source.state === 'unavailable' || source.state === 'out_of_range')
-    .map((source) => `${source.name}: ${source.message || source.state.replaceAll('_', ' ')}`);
+    .map((source) => source.name);
 
   return { event: input, conflicts, suggestions: [], checkedAt: new Date().toISOString(), sources, coverageGaps };
 }

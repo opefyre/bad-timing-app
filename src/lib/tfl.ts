@@ -13,9 +13,7 @@ type LineStatus = { statusSeverity?: number; statusSeverityDescription?: string;
 type Line = { id: string; name: string; lineStatuses?: LineStatus[] };
 
 function addKeys(url: URL) {
-  const appId = process.env.TFL_APP_ID;
   const appKey = process.env.TFL_APP_KEY;
-  if (appId) url.searchParams.set('app_id', appId);
   if (appKey) url.searchParams.set('app_key', appKey);
   return url;
 }

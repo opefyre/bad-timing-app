@@ -1,5 +1,5 @@
 import { Conflict, EventInput, PreferenceOverrides, Report, Suggestion } from '@/types';
-import { analyzeEvent } from './analyzer';
+import { AnalysisContext, analyzeEvent } from './analyzer';
 import { addLocalDays, addLocalMinutes, formatLocalDateTime, minuteDistance } from './time';
 
 function preferenceFor(conflict: Conflict, overrides: PreferenceOverrides) {
@@ -18,9 +18,10 @@ async function evaluateCandidate(
   base: Report,
   candidateDateTime: string,
   overrides: PreferenceOverrides,
+  context: AnalysisContext,
 ): Promise<Suggestion | null> {
   const candidateEvent: EventInput = { ...base.event, venue: { ...base.event.venue }, dateTime: candidateDateTime };
-  const candidate = await analyzeEvent(candidateEvent);
+  const candidate = await analyzeEvent(candidateEvent, context);
   const baseAvoid = base.conflicts.filter((conflict) => preferenceFor(conflict, overrides) === 'avoid');
   const basePlan = base.conflicts.filter((conflict) => preferenceFor(conflict, overrides) === 'plan_around');
   const baseCheckedSources = new Set(base.sources.filter((source) => source.state === 'checked').map((source) => source.id));
@@ -56,7 +57,7 @@ function best(candidates: Array<Suggestion | null>): Suggestion | null {
   })[0] ?? null;
 }
 
-export async function findAlternatives(base: Report, overrides: PreferenceOverrides = {}): Promise<Suggestion[]> {
+export async function findAlternatives(base: Report, overrides: PreferenceOverrides = {}, context: AnalysisContext = {}): Promise<Suggestion[]> {
   const baseAvoid = base.conflicts.filter((conflict) => preferenceFor(conflict, overrides) === 'avoid');
   if (!baseAvoid.length) return [];
 
@@ -66,8 +67,8 @@ export async function findAlternatives(base: Report, overrides: PreferenceOverri
   const otherDays = [1, 2, 3, 7].map((days) => addLocalDays(base.event.dateTime, days));
 
   const [earlierResults, dayResults] = await Promise.all([
-    Promise.all(earlierTimes.map((candidate) => evaluateCandidate('earlier', base, candidate, overrides))),
-    Promise.all(otherDays.map((candidate) => evaluateCandidate('another_day', base, candidate, overrides))),
+    Promise.all(earlierTimes.map((candidate) => evaluateCandidate('earlier', base, candidate, overrides, context))),
+    Promise.all(otherDays.map((candidate) => evaluateCandidate('another_day', base, candidate, overrides, context))),
   ]);
 
   return [best(earlierResults), best(dayResults)]

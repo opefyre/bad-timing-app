@@ -13,7 +13,7 @@ type Series = {
 };
 type Forecast = { properties?: { timeseries?: Series[] } };
 
-export async function checkWeather(input: EventInput): Promise<CheckResult> {
+export async function checkWeather(input: EventInput, siteOrigin?: string): Promise<CheckResult> {
   const checkedAt = new Date().toISOString();
   const base = { source: 'MET Norway Locationforecast', sourceId: 'weather', url: 'https://api.met.no/weatherapi/locationforecast/2.0/', lastChecked: checkedAt };
   const { lat, lng, timezone } = input.venue;
@@ -22,8 +22,8 @@ export async function checkWeather(input: EventInput): Promise<CheckResult> {
   try {
     const safeLat = Number(lat.toFixed(4));
     const safeLng = Number(lng.toFixed(4));
-    const userAgent = process.env.MET_USER_AGENT;
-    if (!userAgent) return { ...base, state: 'unavailable', data: [], message: 'MET_USER_AGENT is not configured' };
+    const explicitUserAgent = process.env.MET_USER_AGENT?.trim();
+    const userAgent = explicitUserAgent || `BadTiming/1.0 ${siteOrigin || 'local-development'}`;
     const data = await cached(`met:${safeLat}:${safeLng}`, 15 * 60_000, () => fetchJson<Forecast>(
       `https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${safeLat}&lon=${safeLng}`,
       { headers: { 'User-Agent': userAgent } },

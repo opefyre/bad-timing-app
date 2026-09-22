@@ -1,19 +1,22 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import DurationPicker from '@/components/DurationPicker';
+import LocationMap from '@/components/LocationMap';
+import StartPicker from '@/components/StartPicker';
 import { EventInput, EventKind, VenueInput } from '@/types';
 
 type LocationSuggestion = VenueInput & { id: string; label: string; lat: number; lng: number };
 type TvSuggestion = { id: number; name: string; detail?: string };
 
-const EVENT_KINDS: Array<{ value: EventKind; label: string; hint: string }> = [
-  { value: 'birthday', label: 'BIRTHDAY', hint: 'friends + plans' },
-  { value: 'dinner', label: 'DINNER', hint: 'table + travel' },
-  { value: 'meetup', label: 'MEETUP', hint: 'community' },
-  { value: 'workshop', label: 'WORKSHOP', hint: 'focused time' },
-  { value: 'outdoor_activity', label: 'OUTDOOR', hint: 'weather + light' },
-  { value: 'screening', label: 'SCREENING', hint: 'match / TV' },
-  { value: 'other', label: 'OTHER', hint: 'something else' },
+const EVENT_KINDS: Array<{ value: EventKind; label: string }> = [
+  { value: 'birthday', label: 'Birthday' },
+  { value: 'dinner', label: 'Dinner' },
+  { value: 'meetup', label: 'Meetup' },
+  { value: 'workshop', label: 'Workshop' },
+  { value: 'outdoor_activity', label: 'Outdoor activity' },
+  { value: 'screening', label: 'Screening' },
+  { value: 'other', label: 'Other' },
 ];
 
 function defaultLocalDateTime() {
@@ -35,6 +38,8 @@ export default function EventForm({ onSubmit, isLoading, initialData }: Props) {
   const [locations, setLocations] = useState<LocationSuggestion[]>([]);
   const [locationBusy, setLocationBusy] = useState(false);
   const [locationOpen, setLocationOpen] = useState(false);
+  const [mapMessage, setMapMessage] = useState<string | null>(null);
+  const [locating, setLocating] = useState(false);
   const locationBox = useRef<HTMLDivElement>(null);
 
   const [eventKind, setEventKind] = useState<EventKind>(initialData?.eventKind ?? 'meetup');
@@ -102,8 +107,16 @@ export default function EventForm({ onSubmit, isLoading, initialData }: Props) {
 
   const canSubmit = useMemo(() => locationQuery.trim().length >= 3 && Boolean(dateTime) && duration >= 15, [locationQuery, dateTime, duration]);
 
+  function setPickedVenue(item: VenueInput, label = item.address) {
+    setVenue(item);
+    setLocationQuery(label);
+    if (item.name && !venueName) setVenueName(item.name);
+    setLocationOpen(false);
+    setMapMessage(null);
+  }
+
   function pickLocation(item: LocationSuggestion) {
-    setVenue({
+    setPickedVenue({
       address: item.label,
       name: item.name,
       lat: item.lat,
@@ -112,10 +125,45 @@ export default function EventForm({ onSubmit, isLoading, initialData }: Props) {
       countryCode: item.countryCode,
       state: item.state,
       city: item.city,
-    });
-    setLocationQuery(item.label);
-    if (item.name && !venueName) setVenueName(item.name);
-    setLocationOpen(false);
+    }, item.label);
+  }
+
+  async function pickCoordinates(lat: number, lng: number) {
+    setLocationBusy(true);
+    setMapMessage(null);
+    try {
+      const response = await fetch(`/api/geocode?lat=${encodeURIComponent(String(lat))}&lng=${encodeURIComponent(String(lng))}`);
+      const data = await response.json();
+      if (!response.ok || !data.location) throw new Error('Could not identify this point');
+      setPickedVenue(data.location, data.location.address);
+    } catch {
+      const address = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+      setVenue({ address, lat, lng });
+      setLocationQuery(address);
+      setMapMessage('Pin selected. The address could not be resolved.');
+    } finally {
+      setLocationBusy(false);
+    }
+  }
+
+  function useMyLocation() {
+    if (!navigator.geolocation) {
+      setMapMessage('Location is not available in this browser.');
+      return;
+    }
+    setLocating(true);
+    setMapMessage(null);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLocating(false);
+        void pickCoordinates(position.coords.latitude, position.coords.longitude);
+      },
+      () => {
+        setLocating(false);
+        setMapMessage('Location permission was not granted.');
+      },
+      { enableHighAccuracy: false, timeout: 10_000, maximumAge: 5 * 60_000 },
+    );
   }
 
   function pickProgramme(item: TvSuggestion) {
@@ -146,9 +194,12 @@ export default function EventForm({ onSubmit, isLoading, initialData }: Props) {
   return (
     <form className="pixel-form" onSubmit={submit}>
       <section className="form-section">
-        <div className="step-tag">01 / WHERE</div>
+        <div className="section-title">Where?</div>
         <div className="field-stack" ref={locationBox}>
-          <label className="field-label" htmlFor="location">LOCATION</label>
+          <div className="field-label-row">
+            <label className="field-label" htmlFor="location">Location</label>
+            {locationBusy && <span className="field-state">Searching…</span>}
+          </div>
           <div className="input-shell">
             <input
               id="location"
@@ -159,43 +210,40 @@ export default function EventForm({ onSubmit, isLoading, initialData }: Props) {
                 if (venue?.address !== event.target.value) setVenue(null);
               }}
               onFocus={() => locations.length > 0 && setLocationOpen(true)}
-              placeholder="Type a venue, address or city"
               autoComplete="off"
               required
             />
-            <span className={`input-status ${locationBusy ? 'blink' : ''}`}>{locationBusy ? '...' : venue?.timezone ? 'OK' : '>>'}</span>
           </div>
           {locationOpen && locations.length > 0 && (
-            <div className="pixel-popover" role="listbox" aria-label="Location suggestions">
+            <div className="pixel-popover location-results" role="listbox" aria-label="Location suggestions">
               {locations.map((item) => (
                 <button type="button" className="popover-option" key={item.id} onClick={() => pickLocation(item)}>
                   <span>{item.label}</span>
-                  <small>{item.timezone || 'timezone will be resolved'}</small>
                 </button>
               ))}
             </div>
           )}
-          <p className="microcopy">LOCATION MATCHING BY <a href="https://www.geoapify.com/" target="_blank" rel="noreferrer">GEOAPIFY</a>. THE EVENT TIME IS INTERPRETED IN THE VENUE&apos;S TIMEZONE.</p>
+          <LocationMap venue={venue} onPick={(lat, lng) => void pickCoordinates(lat, lng)} onLocate={useMyLocation} locating={locating} />
+          {mapMessage && <p className="field-message">{mapMessage}</p>}
         </div>
 
         <div className="form-grid two">
           <div className="field-stack">
-            <label className="field-label" htmlFor="venue-name">VENUE NAME <span>OPTIONAL</span></label>
-            <input id="venue-name" className="pixel-input" value={venueName} onChange={(event) => setVenueName(event.target.value)} placeholder="e.g. Barbican Centre" />
+            <label className="field-label" htmlFor="venue-name">Venue name <span>optional</span></label>
+            <input id="venue-name" className="pixel-input" value={venueName} onChange={(event) => setVenueName(event.target.value)} />
           </div>
           <div className="field-stack">
-            <label className="field-label">INDOOR / OUTDOOR</label>
-            <div className="pixel-segment" role="group" aria-label="Indoor or outdoor">
-              <button type="button" className={!isOutdoor ? 'active' : ''} onClick={() => setIsOutdoor(false)}>INDOOR</button>
-              <button type="button" className={isOutdoor ? 'active' : ''} onClick={() => setIsOutdoor(true)}>OUTDOOR</button>
+            <label className="field-label">Setting</label>
+            <div className="pixel-segment equal-height" role="group" aria-label="Indoor or outdoor">
+              <button type="button" className={!isOutdoor ? 'active' : ''} onClick={() => setIsOutdoor(false)}>Indoor</button>
+              <button type="button" className={isOutdoor ? 'active' : ''} onClick={() => setIsOutdoor(true)}>Outdoor</button>
             </div>
           </div>
         </div>
       </section>
 
       <section className="form-section">
-        <div className="step-tag">02 / WHAT</div>
-        <label className="field-label">EVENT TYPE</label>
+        <div className="section-title">What?</div>
         <div className="kind-grid">
           {EVENT_KINDS.map((kind) => (
             <button
@@ -207,56 +255,51 @@ export default function EventForm({ onSubmit, isLoading, initialData }: Props) {
                 if (kind.value === 'outdoor_activity') setIsOutdoor(true);
               }}
             >
-              <strong>{kind.label}</strong>
-              <span>{kind.hint}</span>
+              {kind.label}
             </button>
           ))}
         </div>
       </section>
 
       <section className="form-section">
-        <div className="step-tag">03 / WHEN</div>
-        <div className="form-grid two">
+        <div className="section-title">When?</div>
+        <div className="form-grid two no-top-margin">
           <div className="field-stack">
-            <label className="field-label" htmlFor="date-time">START</label>
-            <input id="date-time" type="datetime-local" className="pixel-input" value={dateTime} onChange={(event) => setDateTime(event.target.value)} required />
+            <label className="field-label">Start</label>
+            <StartPicker value={dateTime} onChange={setDateTime} />
           </div>
           <div className="field-stack">
-            <label className="field-label" htmlFor="duration">DURATION</label>
-            <select id="duration" className="pixel-input" value={duration} onChange={(event) => setDuration(Number(event.target.value))}>
-              {[30, 45, 60, 90, 120, 150, 180, 240, 360].map((minutes) => <option key={minutes} value={minutes}>{minutes < 60 ? `${minutes} MIN` : `${minutes / 60} ${minutes === 60 ? 'HOUR' : 'HOURS'}`}</option>)}
-            </select>
+            <label className="field-label">Duration</label>
+            <DurationPicker value={duration} onChange={setDuration} />
           </div>
         </div>
       </section>
 
       <section className="form-section optional-zone">
-        <div className="step-tag">04 / YOUR CROWD <span>OPTIONAL</span></div>
-        <p className="section-copy">Only add things your group actually cares about. We do not guess private preferences.</p>
+        <div className="section-title">Anything your group follows? <span>optional</span></div>
         <div className="form-grid two">
           <div className="field-stack">
-            <label className="field-label" htmlFor="football">FOOTBALL TEAM</label>
-            <input id="football" className="pixel-input" value={footballTeam} onChange={(event) => setFootballTeam(event.target.value)} placeholder="e.g. Arsenal" />
+            <label className="field-label" htmlFor="football">Football team</label>
+            <input id="football" className="pixel-input" value={footballTeam} onChange={(event) => setFootballTeam(event.target.value)} />
           </div>
           <div className="field-stack" ref={tvBox}>
-            <label className="field-label" htmlFor="programme">TV PROGRAMME</label>
-            <div className="input-shell">
-              <input
-                id="programme"
-                className="pixel-input"
-                value={programmeName}
-                onChange={(event) => { setProgrammeName(event.target.value); setProgrammeId(undefined); }}
-                onFocus={() => tvResults.length > 0 && setTvOpen(true)}
-                placeholder="e.g. The Great British Bake Off"
-                autoComplete="off"
-              />
-              <span className={`input-status small ${tvBusy ? 'blink' : ''}`}>{programmeId ? 'OK' : tvBusy ? '...' : ''}</span>
+            <div className="field-label-row">
+              <label className="field-label" htmlFor="programme">TV programme</label>
+              {tvBusy && <span className="field-state">Searching…</span>}
             </div>
+            <input
+              id="programme"
+              className="pixel-input"
+              value={programmeName}
+              onChange={(event) => { setProgrammeName(event.target.value); setProgrammeId(undefined); }}
+              onFocus={() => tvResults.length > 0 && setTvOpen(true)}
+              autoComplete="off"
+            />
             {tvOpen && tvResults.length > 0 && (
               <div className="pixel-popover compact" role="listbox" aria-label="TV programme suggestions">
                 {tvResults.map((item) => (
                   <button type="button" className="popover-option" key={item.id} onClick={() => pickProgramme(item)}>
-                    <span>{item.name}</span><small>{item.detail}</small>
+                    <span>{item.name}</span>{item.detail && <small>{item.detail}</small>}
                   </button>
                 ))}
               </div>
@@ -266,9 +309,7 @@ export default function EventForm({ onSubmit, isLoading, initialData }: Props) {
       </section>
 
       <button className="pixel-cta" type="submit" disabled={!canSubmit || isLoading}>
-        <span className="cta-pixels" aria-hidden="true"><i /><i /><i /></span>
-        {isLoading ? 'CHECKING THE OUTSIDE WORLD...' : 'CHECK THIS DATE'}
-        <span aria-hidden="true">→</span>
+        {isLoading ? 'Checking…' : 'Check this date'}<span aria-hidden="true">→</span>
       </button>
     </form>
   );
