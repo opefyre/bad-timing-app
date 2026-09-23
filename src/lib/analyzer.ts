@@ -3,6 +3,7 @@ import { geocodeVenue } from './geocoding';
 import { checkTicketmaster } from './ticketmaster';
 import { checkFootballData } from './football-data';
 import { checkFootballAf } from './api-football';
+import { checkFootballEspn } from './espn-football';
 import { checkWeather } from './weather';
 import { checkDaylight } from './daylight';
 import { checkTVmaze } from './tvmaze';
@@ -19,7 +20,7 @@ import { possibleInstants } from './time';
 import { InputError } from './validation';
 export interface AnalysisContext { siteOrigin?:string }
 export const CHECKS:Array<[string,(input:EventInput)=>Promise<CheckResult>]>=[
- ['ticketmaster',checkTicketmaster],['football',checkFootballData],['football-af',checkFootballAf],['tvmaze',checkTVmaze],['bank-holidays',checkBankHolidays],['weather',checkWeather],['daylight',checkDaylight],['tfl',checkTfLDisruptions],['tomtom',checkTomTom],['transitland',checkTransitland],['openholidays',checkOpenHolidays],['gdelt',checkGdelt],['ipma',checkIpma],['nws',checkNws],['gdacs',checkGdacs],['eonet',checkEonet],['firms',checkFirms],['usgs',checkUsgs],['airquality',checkAirQuality],['seatgeek',checkSeatGeek],['radar',checkRadar],
+ ['ticketmaster',checkTicketmaster],['football',checkFootballData],['football-af',checkFootballAf],['football-espn',checkFootballEspn],['tvmaze',checkTVmaze],['bank-holidays',checkBankHolidays],['weather',checkWeather],['daylight',checkDaylight],['tfl',checkTfLDisruptions],['tomtom',checkTomTom],['transitland',checkTransitland],['openholidays',checkOpenHolidays],['gdelt',checkGdelt],['ipma',checkIpma],['nws',checkNws],['gdacs',checkGdacs],['eonet',checkEonet],['firms',checkFirms],['usgs',checkUsgs],['airquality',checkAirQuality],['seatgeek',checkSeatGeek],['radar',checkRadar],
 ];
 export function statusFor(r:CheckResult):SourceStatus{return {id:r.sourceId,name:r.source,url:r.url,state:r.state,checkedAt:r.lastChecked,message:r.message,scope:r.scope??'event',fetchedAt:r.fetchedAt,limitations:r.limitations,itemCount:r.data.length};}
 export async function analyzeEvent(rawInput:EventInput,context:AnalysisContext={}):Promise<Report>{

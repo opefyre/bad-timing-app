@@ -12,6 +12,7 @@
     "test": "node --require ./scripts/register.cjs --test tests/*.test.cjs",
     "doctor": "node --require ./scripts/register.cjs scripts/doctor.cjs",
     "teams": "node --require ./scripts/register.cjs scripts/fetch-teams.cjs",
+    "teams-espn": "node scripts/fetch-espn-teams.cjs",
     "smoke": "node --require ./scripts/register.cjs scripts/smoke.cjs",
     "discover": "node --require ./scripts/register.cjs scripts/discover.cjs"
   },

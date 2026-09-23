@@ -36,6 +36,15 @@ Primary documentation reviewed for this implementation: 22 September 2026. These
 - Reuse: Provider terms; keep credentials confidential.
 - Implementation: `/teams?search=` for the merged picker; `/fixtures?team=&season=&from=&to=` per selected team, season inferred from the event window, pacing ~1 request/second. Cancelled/postponed/suspended fixtures are dropped; a two-hour match window is estimated. Teams are matched by provider-native ID (never guessed across providers).
 
+## ESPN
+
+- Mode: **automatic** · free public API, no key.
+- [Schedule API](https://site.api.espn.com/apis/site/v2/sports/soccer/) · [Publisher](https://www.espn.com/soccer/).
+- Coverage: Current-season fixtures for a shipped snapshot of 15 worldwide top leagues (Premier League, LaLiga, Bundesliga, Serie A, Ligue 1, Liga Portugal, Eredivisie, Brasileirão, MLS, Liga MX, Liga Profesional, Belgian Pro League, Scottish Premiership, Süper Lig, Superligaen). Match end times are estimates.
+- Sent: Selected team ID and the event calendar date, per league.
+- Reuse: Publicly visible ESPN.com schedule data; respect the site terms and cache responses.
+- Implementation: `site.web.api.espn.com/.../teams` snapshotted into a shipped index (`npm run teams-espn` regenerates it); per league and calendar date a `scoreboard?dates=` request is cached for 3 hours. A two-hour match window is estimated from the scheduled kickoff.
+
 ## TVmaze
 
 - Mode: **automatic**.

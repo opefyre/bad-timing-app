@@ -16,7 +16,7 @@ export interface VenueInput {
   countryName?: string;
 }
 
-export type FootballSource = 'football-data' | 'api-football';
+export type FootballSource = 'football-data' | 'api-football' | 'espn';
 
 export interface FootballTeam {
   id: number;

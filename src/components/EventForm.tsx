@@ -361,7 +361,7 @@ export default function EventForm({ onSubmit, isLoading, initialData }: Props) {
               <div className="team-chips" role="list" aria-label="Selected football teams">
                 {footballTeams.map((team) => (
                   <button key={team.id} type="button" className="team-chip" onClick={() => removeFootballTeam(team.id)} aria-label={`Remove ${team.name}`}>
-                    <span>{team.name}</span>{team.source === 'api-football' && <small>· API-Football</small>}<span aria-hidden="true">×</span>
+                    <span>{team.name}</span>{team.source === 'api-football' && <small>· API-Football</small>}{team.source === 'espn' && <small>· ESPN</small>}<span aria-hidden="true">×</span>
                   </button>
                 ))}
               </div>
