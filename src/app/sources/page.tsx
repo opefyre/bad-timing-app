@@ -1,8 +1,9 @@
+import {pageMetadata} from '@/lib/seo';
 import InfoLayout from '@/components/InfoLayout';
 import {PROVIDERS} from '@/lib/connectors/catalog';
 import {configuredFeeds,feedFamily} from '@/lib/connectors/feed-config';
 export const dynamic='force-dynamic';
-export const metadata={title:'Sources · Bad Timing'};
+export const metadata=pageMetadata('Data sources and coverage | Bad Timing','See the public sources Bad Timing checks for event clashes, what each source covers and which checks depend on available connections and local data.','/sources');
 export default function SourcesPage(){
  const feeds=configuredFeeds().filter(f=>f.enabled);
  return <InfoLayout title="Sources" intro="What can be checked, what gets sent, and where the information comes from.">
