@@ -1,10 +1,11 @@
 import type { Metadata, Viewport } from 'next';
+import { pageMetadata, siteUrl } from '@/lib/seo';
 import 'leaflet/dist/leaflet.css';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Bad Timing',
-  description: 'Check what might interfere with an event before you invite people.',
+  metadataBase: new URL(siteUrl),
+  ...pageMetadata('Bad Timing: check clashes before your event', 'Check an event date and place against public sources for weather, holidays, sports and transport disruptions. Review clashes before inviting people.', '/'),
   icons: { icon: '/bad-timing-logo.svg' },
 };
 

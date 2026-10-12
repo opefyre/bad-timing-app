@@ -1,7 +1,8 @@
+import {pageMetadata} from '@/lib/seo';
 import InfoLayout from '@/components/InfoLayout';
 import {deploymentDetails} from '@/lib/deployment';
 export const dynamic='force-dynamic';
-export const metadata={title:'Terms · Bad Timing'};
+export const metadata=pageMetadata('Terms of use and report limits | Bad Timing','Understand how to use Bad Timing reports, their data and coverage limits, alternative time suggestions and the role of official safety instructions.','/terms');
 export default function TermsPage(){const d=deploymentDetails();return <InfoLayout title="Terms" intro="A planning aid, not a promise that an event will be safe or uninterrupted.">
  <section className="info-section"><h2>The service</h2><p className="info-copy">BAD TIMING compares a place and time with selected public information. The service is operated by {d.operator||'the operator identified in the Privacy page when configured'}. It does not check private calendars, book venues, issue permits, reserve transport or establish anyone’s availability.</p></section>
  <section className="info-section"><h2>Understanding a report</h2><p className="info-copy">A report reflects only the connected sources, geographic scopes and records returned at the stated check time. Missing, stale, inaccessible, unconfigured or unsupported sources are not evidence that nothing is happening. Listings, timetables, warnings, road works and forecasts can change after a check.</p><p className="info-copy">“At this time” describes an overlap with a supplied or explicitly estimated time window. “Check locally” includes recent news, observations, incomplete schedules and regional context. A report may show multiple publishers describing the same situation. A selected radius is not an attendee’s travel route, a cordon or a hazard boundary.</p></section>

@@ -1,7 +1,8 @@
+import {pageMetadata} from '@/lib/seo';
 import InfoLayout from '@/components/InfoLayout';
 import {deploymentDetails,externalUrl,legalReady} from '@/lib/deployment';
 export const dynamic='force-dynamic';
-export const metadata={title:'Privacy · Bad Timing'};
+export const metadata=pageMetadata('Privacy and event data | Bad Timing','Read how Bad Timing handles event locations, external data requests, temporary caching and hosting logs, with the operator details for this deployment.','/data');
 export default function DataPage(){const d=deploymentDetails();const hostUrl=externalUrl(d.hostPrivacy),authority=externalUrl(d.authority);
  return <InfoLayout title="Privacy" intro="How your event details are handled.">
   {!legalReady()&&<p className="deployment-notice" role="note">This deployment’s privacy notice is incomplete: the operator has not yet supplied all contact, hosting, retention and legal-basis details. Check with the operator before sharing sensitive locations.</p>}
